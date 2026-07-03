@@ -1,0 +1,11 @@
+# EAS uses this instead of .gitignore when deciding what to upload for a build.
+# Mirror .gitignore BUT do NOT ignore google-services.json — the native
+# Android build needs it to connect to FCM for push notifications.
+node_modules/
+.expo/
+dist/
+*.log
+.env
+
+# keep the private service-account key out of the build (only FCM V1 upload needed)
+*-firebase-adminsdk-*.json

@@ -55,7 +55,13 @@ export async function registerForPush(): Promise<void> {
     }
     if (status !== 'granted') return;
 
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    // Pass projectId explicitly (dev-client builds don't always auto-detect it).
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      (Constants as any).easConfig?.projectId;
+    const tokenData = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
     await api.post('/device-tokens', { platform, token: tokenData.data });
   } catch {

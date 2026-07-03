@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "test.hms.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#4f46e5"
       }
@@ -32,7 +33,12 @@
       ]
     ],
     "extra": {
-      "apiUrl": "http://10.186.95.178:3000/api/v1"
-    }
+      "apiUrl": "http://10.186.95.178:3000/api/v1",
+      "router": {},
+      "eas": {
+        "projectId": "3be841c1-c93d-4c54-b1fd-90e9e77ebe9b"
+      }
+    },
+    "owner": "dhruvharani"
   }
 }
