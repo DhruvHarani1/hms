@@ -22,7 +22,9 @@ enum Role {
 }
 
 enum UserStatus {
+  pending
   active
+  rejected
   inactive
   suspended
 }
@@ -131,9 +133,10 @@ model User {
   phone         String?
   passwordHash  String     @map("password_hash")
   avatarUrl     String?    @map("avatar_url")
-  status        UserStatus @default(active)
-  emailVerified DateTime?  @map("email_verified_at")
-  lastLoginAt   DateTime?  @map("last_login_at")
+  status          UserStatus @default(active)
+  rejectionReason String?    @map("rejection_reason")
+  emailVerified   DateTime?  @map("email_verified_at")
+  lastLoginAt     DateTime?  @map("last_login_at")
   createdAt     DateTime   @default(now()) @map("created_at")
   updatedAt     DateTime   @updatedAt @map("updated_at")
   deletedAt     DateTime?  @map("deleted_at")

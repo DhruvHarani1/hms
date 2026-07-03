@@ -2,6 +2,7 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
@@ -10,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import {
   ChangePasswordDto,
   LoginDto,
+  RegisterDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { JwtPayload } from './jwt.strategy';
@@ -68,6 +70,82 @@ export class AuthService {
     return rest;
   }
 
+  /**
+   * Public self-registration → creates a PENDING student that a warden must
+   * approve before they can log in. If a previously REJECTED user re-applies
+   * with the same email, we flip them back to pending (re-request).
+   */
+  async register(dto: RegisterDto) {
+    const email = dto.email.toLowerCase();
+    const passwordHash = await argon2.hash(dto.password);
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.status === 'active') {
+        throw new BadRequestException(
+          'This email is already registered. Please log in.',
+        );
+      }
+      if (existing.status === 'pending') {
+        throw new BadRequestException(
+          'A request for this email is already awaiting approval.',
+        );
+      }
+      if (existing.status === 'rejected') {
+        // Re-apply: reset to pending with fresh details.
+        await this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            fullName: dto.fullName,
+            passwordHash,
+            status: 'pending',
+            rejectionReason: null,
+          },
+        });
+        await this.prisma.studentProfile.updateMany({
+          where: { userId: existing.id },
+          data: {
+            rollNo: dto.rollNo,
+            roomNumber: dto.roomNumber,
+          },
+        });
+        return { status: 'pending', reapplied: true };
+      }
+      throw new BadRequestException('This email cannot be registered.');
+    }
+
+    // Single-tenant MVP: attach to the (one) hostel.
+    const hostel = await this.prisma.hostel.findFirst({
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!hostel) {
+      throw new BadRequestException(
+        'No hostel is configured yet. Contact the warden.',
+      );
+    }
+
+    await this.prisma.user.create({
+      data: {
+        hostelId: hostel.id,
+        role: 'student',
+        fullName: dto.fullName,
+        email,
+        phone: dto.phone,
+        passwordHash,
+        status: 'pending',
+        studentProfile: {
+          create: {
+            hostelId: hostel.id,
+            rollNo: dto.rollNo,
+            roomNumber: dto.roomNumber,
+          },
+        },
+      },
+    });
+
+    return { status: 'pending', reapplied: false };
+  }
+
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -75,9 +153,24 @@ export class AuthService {
     if (!user || user.deletedAt) {
       throw new UnauthorizedException('Invalid credentials');
     }
+
+    // Approval-gated login: give clear, specific reasons.
+    if (user.status === 'pending') {
+      throw new ForbiddenException(
+        'Your join request is awaiting warden approval.',
+      );
+    }
+    if (user.status === 'rejected') {
+      throw new ForbiddenException(
+        user.rejectionReason
+          ? `Your request was rejected: ${user.rejectionReason}. You can re-apply from Sign up.`
+          : 'Your request was rejected. You can re-apply from Sign up.',
+      );
+    }
     if (user.status !== 'active') {
       throw new UnauthorizedException('Account is not active');
     }
+
     const valid = await argon2.verify(user.passwordHash, dto.password);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');

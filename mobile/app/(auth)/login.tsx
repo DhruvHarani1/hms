@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Alert, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/stores/auth';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 import { registerForPush } from '@/src/notifications/register';
 
 export default function Login() {
+  const router = useRouter();
   const { login, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,6 +56,11 @@ export default function Login() {
         />
 
         <Button title="Log in" onPress={onSubmit} loading={loading} />
+        <Button
+          title="New here? Sign up"
+          variant="outline"
+          onPress={() => router.push('/(auth)/register')}
+        />
 
         <Muted>
           Demo — warden@hostel.test / aarav@hostel.test · Password123!
