@@ -54,6 +54,7 @@ function AuthGate() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(warden)" />
       <Stack.Screen name="(student)" />
+      <Stack.Screen name="notifications" options={{ headerShown: true }} />
     </Stack>
   );
 }

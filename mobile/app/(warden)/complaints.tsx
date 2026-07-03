@@ -1,15 +1,14 @@
-import { Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Card, Muted } from '@/src/components/ui';
-import { colors } from '@/src/lib/theme';
-
-const STATUS_COLOR: Record<string, string> = {
-  pending: colors.warning,
-  in_progress: colors.primary,
-  resolved: colors.success,
-  closed: colors.muted,
-};
+import {
+  EmptyState,
+  ErrorState,
+  SkeletonList,
+  StatusPill,
+} from '@/src/components/primitives';
+import { colors, radius } from '@/src/lib/theme';
 
 const NEXT: Record<string, string> = {
   pending: 'in_progress',
@@ -19,7 +18,7 @@ const NEXT: Record<string, string> = {
 
 export default function WardenComplaints() {
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
     queryKey: ['complaints'],
     queryFn: async () => (await api.get('/complaints')).data,
   });
@@ -35,15 +34,27 @@ export default function WardenComplaints() {
     }
   }
 
+  if (isLoading) return <SkeletonList count={5} />;
+  if (isError) return <ErrorState onRetry={refetch} />;
+
   return (
     <FlatList
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={{ padding: 16, gap: 12 }}
+      contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
       data={data ?? []}
       keyExtractor={(item: any) => item.id}
-      ListEmptyComponent={<Muted>No complaints yet.</Muted>}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+      }
+      ListEmptyComponent={
+        <EmptyState
+          emoji="✅"
+          title="No complaints"
+          subtitle="When students report issues, they'll appear here."
+        />
+      }
       renderItem={({ item }: { item: any }) => (
-        <Card>
+        <Card style={{ gap: 6 }}>
           <View
             style={{
               flexDirection: 'row',
@@ -54,26 +65,11 @@ export default function WardenComplaints() {
             <Text style={{ fontWeight: '700', flex: 1, color: colors.text }}>
               {item.title}
             </Text>
-            <View
-              style={{
-                backgroundColor: STATUS_COLOR[item.status] + '22',
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 8,
-              }}
-            >
-              <Text
-                style={{
-                  color: STATUS_COLOR[item.status],
-                  fontWeight: '700',
-                  fontSize: 12,
-                }}
-              >
-                {item.status.replace('_', ' ')}
-              </Text>
-            </View>
+            <StatusPill status={item.status} />
           </View>
-          <Muted>{item.student?.fullName} · {item.category?.name ?? 'General'}</Muted>
+          <Muted>
+            {item.student?.fullName} · {item.category?.name ?? 'General'}
+          </Muted>
           <Text style={{ color: colors.text, marginTop: 4 }}>
             {item.description}
           </Text>
@@ -83,7 +79,7 @@ export default function WardenComplaints() {
               style={{
                 marginTop: 10,
                 backgroundColor: colors.primary,
-                borderRadius: 10,
+                borderRadius: radius.md,
                 paddingVertical: 10,
                 alignItems: 'center',
               }}

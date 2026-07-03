@@ -1,6 +1,8 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { colors } from '@/src/lib/theme';
+import { BellButton } from '@/src/components/primitives';
+import { useUnread } from '@/src/hooks/useUnread';
 
 function icon(emoji: string) {
   return ({ color }: { color: string }) => (
@@ -9,6 +11,11 @@ function icon(emoji: string) {
 }
 
 export default function WardenLayout() {
+  const router = useRouter();
+  const unread = useUnread();
+  const bell = () => (
+    <BellButton count={unread} onPress={() => router.push('/notifications')} />
+  );
   return (
     <Tabs
       screenOptions={{
@@ -19,7 +26,7 @@ export default function WardenLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Home', tabBarIcon: icon('🏠') }}
+        options={{ title: 'Home', tabBarIcon: icon('🏠'), headerRight: bell }}
       />
       <Tabs.Screen
         name="complaints"
