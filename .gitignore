@@ -1,0 +1,22 @@
+# deps
+node_modules/
+
+# builds
+dist/
+.expo/
+web-build/
+
+# env / secrets
+.env
+*.env.local
+
+# logs
+*.log
+npm-debug.*
+
+# os
+.DS_Store
+Thumbs.db
+
+# prisma
+backend/prisma/*.db

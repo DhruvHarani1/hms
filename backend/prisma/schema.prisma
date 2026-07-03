@@ -1,0 +1,404 @@
+// Hostel Management System — MVP schema (v1)
+// Only the tables needed for the fast MVP are included here.
+// Deferred features (rooms, leave, fees, visitors, etc.) are added later
+// as additive migrations — see HOSTEL_MANAGEMENT_SYSTEM_DESIGN.md §5.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum Role {
+  super_admin
+  warden
+  staff
+  student
+}
+
+enum UserStatus {
+  active
+  inactive
+  suspended
+}
+
+enum MealType {
+  breakfast
+  lunch
+  dinner
+}
+
+enum MealAttendanceStatus {
+  present
+  absent
+  opted_out
+}
+
+enum MealSource {
+  self
+  qr
+  staff
+}
+
+enum NotificationType {
+  meal
+  announcement
+  emergency
+  maintenance
+  event
+  individual
+  complaint
+}
+
+enum NotificationAudience {
+  all
+  individual
+}
+
+enum NotificationPriority {
+  low
+  normal
+  high
+  critical
+}
+
+enum DevicePlatform {
+  web
+  android
+  ios
+}
+
+enum ComplaintStatus {
+  pending
+  in_progress
+  resolved
+  closed
+}
+
+enum ComplaintPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum NoticeCategory {
+  announcement
+  event
+  holiday
+  rules
+  exam
+}
+
+// ─────────────────────────── Core / Auth ───────────────────────────
+
+model Hostel {
+  id           String   @id @default(uuid())
+  name         String
+  code         String   @unique
+  address      String?
+  city         String?
+  contactEmail String?  @map("contact_email")
+  contactPhone String?  @map("contact_phone")
+  logoUrl      String?  @map("logo_url")
+  timezone     String   @default("Asia/Kolkata")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  users                User[]
+  notifications        Notification[]
+  mealSessions         MealSession[]
+  mealAttendances      MealAttendance[]
+  complaints           Complaint[]
+  complaintCategories  ComplaintCategory[]
+  notices              Notice[]
+  auditLogs            AuditLog[]
+
+  @@map("hostels")
+}
+
+model User {
+  id            String     @id @default(uuid())
+  hostelId      String     @map("hostel_id")
+  role          Role       @default(student)
+  fullName      String     @map("full_name")
+  email         String     @unique
+  phone         String?
+  passwordHash  String     @map("password_hash")
+  avatarUrl     String?    @map("avatar_url")
+  status        UserStatus @default(active)
+  emailVerified DateTime?  @map("email_verified_at")
+  lastLoginAt   DateTime?  @map("last_login_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  deletedAt     DateTime?  @map("deleted_at")
+
+  hostel                 Hostel                   @relation(fields: [hostelId], references: [id])
+  studentProfile         StudentProfile?
+  refreshTokens          RefreshToken[]
+  passwordResets         PasswordReset[]
+  deviceTokens           DeviceToken[]
+  notificationRecipients NotificationRecipient[]
+  mealAttendances        MealAttendance[]
+  complaints             Complaint[]
+  complaintReplies       ComplaintReply[]
+  assignedComplaints     Complaint[]              @relation("ComplaintAssignee")
+
+  @@index([hostelId])
+  @@map("users")
+}
+
+model StudentProfile {
+  id               String    @id @default(uuid())
+  userId           String    @unique @map("user_id")
+  hostelId         String    @map("hostel_id")
+  rollNo           String?   @map("roll_no")
+  course           String?
+  year             Int?
+  department       String?
+  guardianName     String?   @map("guardian_name")
+  guardianPhone    String?   @map("guardian_phone")
+  bloodGroup       String?   @map("blood_group")
+  emergencyContact String?   @map("emergency_contact")
+  address          String?
+  dob              DateTime?
+  gender           String?
+  photoUrl         String?   @map("photo_url")
+  admissionDate    DateTime? @map("admission_date")
+  hostelIdCardNo   String?   @map("hostel_id_card_no")
+  roomNumber       String?   @map("room_number") // simple text for MVP; real room mgmt is deferred
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hostelId])
+  @@map("student_profiles")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ip        String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_resets")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  hostelId   String?  @map("hostel_id")
+  actorId    String?  @map("actor_user_id")
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  hostel Hostel? @relation(fields: [hostelId], references: [id])
+
+  @@index([hostelId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────── Notifications ───────────────────────────
+
+model Notification {
+  id        String               @id @default(uuid())
+  hostelId  String               @map("hostel_id")
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  priority  NotificationPriority @default(normal)
+  audience  NotificationAudience @default(all)
+  createdBy String?              @map("created_by")
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  hostel     Hostel                  @relation(fields: [hostelId], references: [id])
+  recipients NotificationRecipient[]
+
+  @@index([hostelId])
+  @@map("notifications")
+}
+
+model NotificationRecipient {
+  id             String    @id @default(uuid())
+  notificationId String    @map("notification_id")
+  userId         String    @map("user_id")
+  readAt         DateTime? @map("read_at")
+  deliveredAt    DateTime? @map("delivered_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+  @@map("notification_recipients")
+}
+
+model DeviceToken {
+  id        String         @id @default(uuid())
+  userId    String         @map("user_id")
+  platform  DevicePlatform
+  token     String         @unique
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_tokens")
+}
+
+// ─────────────────────────── Meals ───────────────────────────
+
+model MealSession {
+  id            String    @id @default(uuid())
+  hostelId      String    @map("hostel_id")
+  date          DateTime  @db.Date
+  mealType      MealType  @map("meal_type")
+  readyMarkedAt DateTime? @map("ready_marked_at")
+  markedBy      String?   @map("marked_by")
+  menu          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+
+  @@unique([hostelId, date, mealType])
+  @@index([hostelId])
+  @@map("meal_sessions")
+}
+
+model MealAttendance {
+  id        String               @id @default(uuid())
+  hostelId  String               @map("hostel_id")
+  studentId String               @map("student_id")
+  date      DateTime             @db.Date
+  mealType  MealType             @map("meal_type")
+  status    MealAttendanceStatus @default(present)
+  markedAt  DateTime             @default(now()) @map("marked_at")
+  source    MealSource           @default(self)
+
+  hostel  Hostel @relation(fields: [hostelId], references: [id])
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date, mealType])
+  @@index([hostelId, date])
+  @@map("meal_attendance")
+}
+
+// ─────────────────────────── Complaints ───────────────────────────
+
+model ComplaintCategory {
+  id              String            @id @default(uuid())
+  hostelId        String            @map("hostel_id")
+  name            String
+  defaultPriority ComplaintPriority @default(medium) @map("default_priority")
+
+  hostel     Hostel      @relation(fields: [hostelId], references: [id])
+  complaints Complaint[]
+
+  @@map("complaint_categories")
+}
+
+model Complaint {
+  id          String            @id @default(uuid())
+  hostelId    String            @map("hostel_id")
+  studentId   String            @map("student_id")
+  categoryId  String?           @map("category_id")
+  title       String
+  description String
+  status      ComplaintStatus   @default(pending)
+  priority    ComplaintPriority @default(medium)
+  assignedTo  String?           @map("assigned_to")
+  resolvedAt  DateTime?         @map("resolved_at")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  hostel      Hostel                 @relation(fields: [hostelId], references: [id])
+  student     User                   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignee    User?                  @relation("ComplaintAssignee", fields: [assignedTo], references: [id])
+  category    ComplaintCategory?     @relation(fields: [categoryId], references: [id])
+  replies     ComplaintReply[]
+  attachments ComplaintAttachment[]
+
+  @@index([hostelId, status])
+  @@index([studentId])
+  @@map("complaints")
+}
+
+model ComplaintReply {
+  id          String   @id @default(uuid())
+  complaintId String   @map("complaint_id")
+  authorId    String   @map("author_id")
+  message     String
+  isInternal  Boolean  @default(false) @map("is_internal")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([complaintId])
+  @@map("complaint_replies")
+}
+
+model ComplaintAttachment {
+  id          String   @id @default(uuid())
+  complaintId String   @map("complaint_id")
+  fileUrl     String   @map("file_url")
+  uploadedBy  String?  @map("uploaded_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@index([complaintId])
+  @@map("complaint_attachments")
+}
+
+// ─────────────────────────── Notices ───────────────────────────
+
+model Notice {
+  id          String         @id @default(uuid())
+  hostelId    String         @map("hostel_id")
+  title       String
+  body        String
+  category    NoticeCategory @default(announcement)
+  pinned      Boolean        @default(false)
+  publishedAt DateTime?      @map("published_at")
+  expiresAt   DateTime?      @map("expires_at")
+  createdBy   String?        @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+
+  @@index([hostelId])
+  @@map("notices")
+}

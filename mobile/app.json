@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Hostel App",
+    "slug": "hms-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "hmsapp",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#4f46e5"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "test.hms.mobile"
+    },
+    "android": {
+      "package": "test.hms.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#4f46e5"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "color": "#4f46e5"
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://10.186.95.178:3000/api/v1"
+    }
+  }
+}

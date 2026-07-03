@@ -1,0 +1,53 @@
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+import { api } from '@/src/lib/api';
+
+/**
+ * Push registration.
+ *
+ * IMPORTANT: `expo-notifications` remote-push was removed from Expo Go in
+ * SDK 53+. Even *importing* the module in Expo Go throws a red error. So we
+ * lazy-require it and skip entirely when running inside Expo Go. Remote push
+ * works only in a Dev Build / production build (EAS). In Expo Go the app still
+ * works fully via the in-app notification inbox.
+ */
+
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+
+export async function registerForPush(): Promise<void> {
+  if (isExpoGo) {
+    // Expo Go: remote push unsupported — no-op. In-app inbox covers the demo.
+    return;
+  }
+
+  try {
+    // Lazy require so Expo Go never loads the module.
+    const Notifications = require('expo-notifications');
+    const Device = require('expo-device');
+
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+
+    if (!Device.isDevice) return;
+
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let status = existing;
+    if (existing !== 'granted') {
+      const req = await Notifications.requestPermissionsAsync();
+      status = req.status;
+    }
+    if (status !== 'granted') return;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const platform = Platform.OS === 'ios' ? 'ios' : 'android';
+    await api.post('/device-tokens', { platform, token: tokenData.data });
+  } catch {
+    // Non-fatal — app still works with in-app notifications.
+  }
+}
