@@ -5,5 +5,4 @@ dist/
 .env
 
 # firebase / secrets
-google-services.json
 *-firebase-adminsdk-*.json
