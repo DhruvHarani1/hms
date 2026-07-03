@@ -34,6 +34,17 @@ export async function registerForPush(): Promise<void> {
       }),
     });
 
+    // Android needs a channel for heads-up (lock-screen) notifications.
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Hostel alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4f46e5',
+        sound: 'default',
+      });
+    }
+
     if (!Device.isDevice) return;
 
     const { status: existing } = await Notifications.getPermissionsAsync();
