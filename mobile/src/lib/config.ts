@@ -1,23 +1,36 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 
 /**
  * Base API URL.
- * - iOS simulator can reach the host via localhost.
- * - Android emulator must use 10.0.2.2 to reach the host machine's localhost.
- * - On a physical device, replace with your computer's LAN IP (e.g. http://192.168.1.5:3000/api/v1).
+ *
+ * In development we AUTO-DERIVE the host from the Metro dev-server IP the app
+ * connected to (`hostUri`, e.g. "192.168.29.51:8081"). So whatever LAN IP your
+ * PC has today, the API URL follows it automatically — no manual editing when
+ * your Wi-Fi / IP changes. Backend is assumed on port 3000.
+ *
+ * In a production/standalone build there is no dev server, so we fall back to
+ * `extra.apiUrl` from app.json (set this to your deployed API before shipping).
  */
+const API_PORT = 3000;
+const API_PREFIX = '/api/v1';
+
 function resolveApiUrl(): string {
+  // Metro dev-server host: "<ip>:<port>". Present in Expo Go and dev builds.
+  const hostUri =
+    Constants.expoConfig?.hostUri ??
+    (Constants as any).expoGoConfig?.debuggerHost ??
+    (Constants as any).manifest2?.extra?.expoClient?.hostUri;
+
+  if (__DEV__ && hostUri) {
+    const host = String(hostUri).split(':')[0];
+    if (host) return `http://${host}:${API_PORT}${API_PREFIX}`;
+  }
+
+  // Production / standalone fallback.
   const fromConfig = (Constants.expoConfig?.extra as any)?.apiUrl as
     | string
     | undefined;
-
-  if (fromConfig && fromConfig.includes('localhost')) {
-    if (Platform.OS === 'android') {
-      return fromConfig.replace('localhost', '10.0.2.2');
-    }
-  }
-  return fromConfig ?? 'http://localhost:3000/api/v1';
+  return fromConfig ?? `http://localhost:${API_PORT}${API_PREFIX}`;
 }
 
 export const API_URL = resolveApiUrl();
