@@ -2,7 +2,11 @@ import axios from 'axios';
 import { API_URL } from './config';
 import { tokenStore } from './storage';
 
-export const api = axios.create({ baseURL: API_URL });
+export const api = axios.create({ baseURL: API_URL, timeout: 12000 });
+
+// Surfaced for debugging — which base URL the app resolved to.
+// eslint-disable-next-line no-console
+console.log('[HMS] API_URL =', API_URL);
 
 // Attach the access token to every request.
 api.interceptors.request.use(async (config) => {

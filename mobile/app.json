@@ -39,6 +39,12 @@
         "projectId": "3be841c1-c93d-4c54-b1fd-90e9e77ebe9b"
       }
     },
-    "owner": "dhruvharani"
+    "owner": "dhruvharani",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3be841c1-c93d-4c54-b1fd-90e9e77ebe9b"
+    }
   }
 }
