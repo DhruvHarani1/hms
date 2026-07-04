@@ -7,13 +7,15 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { PushService } from './push.service';
 
-const MEAL_LABELS: Record<MealType, string> = {
+type PushMeal = 'breakfast' | 'lunch' | 'dinner';
+
+const MEAL_LABELS: Record<PushMeal, string> = {
   breakfast: 'Breakfast',
   lunch: 'Lunch',
   dinner: 'Dinner',
 };
 
-const MEAL_EMOJI: Record<MealType, string> = {
+const MEAL_EMOJI: Record<PushMeal, string> = {
   breakfast: '🍳',
   lunch: '🍛',
   dinner: '🌙',
@@ -83,7 +85,7 @@ export class NotificationsService {
   async sendMealReady(
     hostelId: string,
     wardenId: string,
-    mealType: MealType,
+    mealType: PushMeal,
     menu?: string,
   ) {
     const label = MEAL_LABELS[mealType];

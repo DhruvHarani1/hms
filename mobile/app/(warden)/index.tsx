@@ -96,21 +96,18 @@ export default function WardenHome() {
         <Stat label="Pending Complaints" value={data?.pendingComplaints ?? '—'} />
       </View>
 
-      <Card>
-        <Text style={{ fontWeight: '700', marginBottom: 8, color: colors.text }}>
-          Today's Meals (marked present)
+      <Card style={{ alignItems: 'center', gap: 2 }}>
+        <Text style={{ fontWeight: '700', color: colors.text }}>
+          Ate today
         </Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          {MEALS.map((m) => (
-            <View key={m.type} style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24 }}>{m.emoji}</Text>
-              <Text style={{ fontWeight: '800', fontSize: 18 }}>
-                {data?.todayMeals?.[m.type] ?? 0}
-              </Text>
-              <Muted>{m.label}</Muted>
-            </View>
-          ))}
-        </View>
+        <Text style={{ fontSize: 30, fontWeight: '800', color: colors.primary }}>
+          {data?.ateToday ?? 0}
+          <Text style={{ fontSize: 18, color: colors.muted }}>
+            {' '}
+            / {data?.totalStudents ?? 0}
+          </Text>
+        </Text>
+        <Muted>students marked a meal today</Muted>
       </Card>
     </ScrollView>
   );

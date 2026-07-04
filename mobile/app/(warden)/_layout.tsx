@@ -57,6 +57,9 @@ export default function WardenLayout() {
         name="more"
         options={{ title: 'More', tabBarIcon: icon('⚙️') }}
       />
+      {/* Not in tab bar — reached via navigation */}
+      <Tabs.Screen name="meal-students" options={{ href: null }} />
+      <Tabs.Screen name="student-meals" options={{ href: null }} />
     </Tabs>
   );
 }

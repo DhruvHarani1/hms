@@ -33,6 +33,7 @@ enum MealType {
   breakfast
   lunch
   dinner
+  day
 }
 
 enum MealAttendanceStatus {

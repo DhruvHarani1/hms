@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Alert, ScrollView, Text } from 'react-native';
+import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 
 export default function WardenMore() {
+  const router = useRouter();
   const { user, logout } = useAuth();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -40,6 +42,12 @@ export default function WardenMore() {
         </Text>
         <Muted>{user?.email} · Warden</Muted>
       </Card>
+
+      <Button
+        title="🍽️  Meal attendance"
+        variant="outline"
+        onPress={() => router.push('/(warden)/meal-students')}
+      />
 
       <H1>Post a Notice</H1>
       <Card style={{ gap: 12 }}>

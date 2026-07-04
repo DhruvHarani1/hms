@@ -1,5 +1,23 @@
-import { ArrayNotEmpty, IsArray, IsIn, IsOptional } from 'class-validator';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { MealType } from '@prisma/client';
+
+/** Mark/unmark a single calendar day (one tick per day). */
+export class MarkDayDto {
+  @IsString()
+  @IsNotEmpty()
+  date: string; // "YYYY-MM-DD"
+
+  @IsBoolean()
+  marked: boolean;
+}
 
 export class MarkMealDto {
   /** ISO date string (yyyy-mm-dd). Defaults to today when omitted. */

@@ -26,12 +26,10 @@ export class DashboardController {
       pendingComplaints,
       inProgressComplaints,
       todaySessions,
-      breakfastCount,
-      lunchCount,
-      dinnerCount,
+      ateToday,
     ] = await Promise.all([
       this.prisma.user.count({
-        where: { hostelId, role: 'student', deletedAt: null },
+        where: { hostelId, role: 'student', status: 'active', deletedAt: null },
       }),
       this.prisma.complaint.count({
         where: { hostelId, status: 'pending' },
@@ -40,25 +38,16 @@ export class DashboardController {
         where: { hostelId, status: 'in_progress' },
       }),
       this.prisma.mealSession.findMany({ where: { hostelId, date: today } }),
-      this.prisma.mealAttendance.count({
-        where: { hostelId, date: today, mealType: 'breakfast', status: 'present' },
-      }),
-      this.prisma.mealAttendance.count({
-        where: { hostelId, date: today, mealType: 'lunch', status: 'present' },
-      }),
-      this.prisma.mealAttendance.count({
-        where: { hostelId, date: today, mealType: 'dinner', status: 'present' },
-      }),
+      this.meals.ateTodayCount(hostelId),
     ]);
 
     return {
       totalStudents,
       pendingComplaints,
       inProgressComplaints,
+      ateToday,
       todayMeals: {
-        breakfast: breakfastCount,
-        lunch: lunchCount,
-        dinner: dinnerCount,
+        ateToday,
         sessionsMarkedReady: todaySessions.map((s) => s.mealType),
       },
     };

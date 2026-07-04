@@ -1,47 +1,25 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ScrollView, Text, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
-import { Card, H1, Muted } from '@/src/components/ui';
+import { Card, Muted } from '@/src/components/ui';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
 
-export default function StudentMeals() {
-  const qc = useQueryClient();
+export default function StudentMealsWardenView() {
+  const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [cursor, setCursor] = useState(() => new Date());
   const month = monthKey(cursor);
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['meals-month', month],
+    queryKey: ['warden-student-meals', id, month],
     queryFn: async () =>
-      (await api.get('/meals/me', { params: { month } })).data,
+      (await api.get(`/meals/student/${id}`, { params: { month } })).data,
   });
 
   const marked = new Set<string>(data?.markedDates ?? []);
-
-  async function toggle(dateStr: string) {
-    const currentlyOn = marked.has(dateStr);
-    // optimistic
-    const next = new Set(marked);
-    if (currentlyOn) next.delete(dateStr);
-    else next.add(dateStr);
-    qc.setQueryData(['meals-month', month], (old: any) => ({
-      ...(old ?? {}),
-      markedDates: [...next].sort(),
-      daysAte: next.size,
-    }));
-
-    try {
-      await api.post('/meals/day', { date: dateStr, marked: !currentlyOn });
-      qc.invalidateQueries({ queryKey: ['meals-month', month] });
-      qc.invalidateQueries({ queryKey: ['meal-stats'] });
-      qc.invalidateQueries({ queryKey: ['student-dashboard'] });
-    } catch (e: any) {
-      qc.invalidateQueries({ queryKey: ['meals-month', month] }); // rollback
-      Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.');
-    }
-  }
 
   function shift(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
@@ -52,8 +30,7 @@ export default function StudentMeals() {
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 16, gap: 16 }}
     >
-      <H1>My Meals</H1>
-      <Muted>Tap any day you ate the hostel meal. Tap again to unmark.</Muted>
+      <Stack.Screen options={{ title: name ?? 'Student meals' }} />
 
       {isLoading ? (
         <SkeletonList count={2} />
@@ -61,11 +38,23 @@ export default function StudentMeals() {
         <ErrorState onRetry={refetch} />
       ) : (
         <>
+          <Card style={{ gap: 2 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
+              {data?.student?.fullName ?? name}
+            </Text>
+            <Muted>
+              {data?.student?.rollNo ? `${data.student.rollNo} · ` : ''}
+              {data?.student?.roomNumber
+                ? `Room ${data.student.roomNumber}`
+                : ''}
+            </Muted>
+          </Card>
+
           <Card>
+            {/* Read-only: no onToggle */}
             <MonthCalendar
               monthDate={cursor}
               marked={marked}
-              onToggle={toggle}
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
             />
@@ -81,7 +70,7 @@ export default function StudentMeals() {
                 / {data?.daysInMonth ?? 0}
               </Text>
             </Text>
-            <Muted>days eaten this month · {data?.percentage ?? 0}%</Muted>
+            <Muted>days eaten · {data?.percentage ?? 0}%</Muted>
           </Card>
         </>
       )}

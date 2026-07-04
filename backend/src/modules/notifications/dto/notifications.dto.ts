@@ -5,11 +5,11 @@ import {
   IsString,
   IsNotEmpty,
 } from 'class-validator';
-import { DevicePlatform, MealType } from '@prisma/client';
+import { DevicePlatform } from '@prisma/client';
 
 export class MealReadyDto {
   @IsIn(['breakfast', 'lunch', 'dinner'])
-  mealType: MealType;
+  mealType: 'breakfast' | 'lunch' | 'dinner';
 
   @IsOptional()
   @IsString()
