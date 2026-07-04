@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { MealType } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { MarkMealDto } from './dto/meals.dto';
+
+export type Meal = 'lunch' | 'dinner';
+type BulkMeal = 'lunch' | 'dinner' | 'both';
 
 @Injectable()
 export class MealsService {
   constructor(private prisma: PrismaService) {}
 
-  /** Parse "YYYY-MM-DD" (or today) to a UTC-midnight Date so @db.Date keys are
-   *  stable and round-trip exactly (no local-timezone off-by-one). */
+  /** "YYYY-MM-DD" (or today) → UTC-midnight Date (stable @db.Date keys). */
   private parseDate(input?: string): Date {
     if (input) {
       const [y, m, d] = input.split('-').map(Number);
@@ -23,6 +23,8 @@ export class MealsService {
   }
 
   private monthRange(month?: string): {
+    year: number;
+    mon: number; // 0-based
     start: Date;
     end: Date;
     days: number;
@@ -30,7 +32,7 @@ export class MealsService {
   } {
     const now = new Date();
     let year = now.getUTCFullYear();
-    let mon = now.getUTCMonth(); // 0-based
+    let mon = now.getUTCMonth();
     if (month) {
       const [y, m] = month.split('-').map(Number);
       if (y && m) {
@@ -42,30 +44,35 @@ export class MealsService {
     const end = new Date(Date.UTC(year, mon + 1, 1));
     const days = new Date(Date.UTC(year, mon + 1, 0)).getUTCDate();
     const label = `${year}-${String(mon + 1).padStart(2, '0')}`;
-    return { start, end, days, label };
+    return { year, mon, start, end, days, label };
   }
 
-  /* ── Day-level marking (one tick per day) ─────────────────────── */
+  private allMonthDates(year: number, mon: number, days: number): Date[] {
+    return Array.from({ length: days }, (_, i) =>
+      new Date(Date.UTC(year, mon, i + 1)),
+    );
+  }
 
-  /** Mark or unmark a single day for a student. mealType 'day' is the
-   *  calendar day-tick. Returns { date, marked }. */
-  async setDay(
+  /* ── Single meal mark/unmark (lunch or dinner only) ───────────── */
+
+  async setMeal(
     hostelId: string,
     studentId: string,
     dateStr: string,
+    meal: Meal,
     marked: boolean,
   ) {
     const date = this.parseDate(dateStr);
     if (marked) {
       await this.prisma.mealAttendance.upsert({
         where: {
-          studentId_date_mealType: { studentId, date, mealType: 'day' },
+          studentId_date_mealType: { studentId, date, mealType: meal },
         },
         create: {
           hostelId,
           studentId,
           date,
-          mealType: 'day',
+          mealType: meal,
           status: 'present',
           source: 'self',
         },
@@ -73,99 +80,112 @@ export class MealsService {
       });
     } else {
       await this.prisma.mealAttendance.deleteMany({
-        where: { studentId, date, mealType: 'day' },
+        where: { studentId, date, mealType: meal },
       });
     }
-    return { date: this.dateKey(date), marked };
+    return { date: this.dateKey(date), meal, marked };
   }
 
-  /** All day-tick dates a student marked in a month → ['2026-07-03', ...]. */
-  async monthDays(studentId: string, month?: string) {
-    const { start, end, days, label } = this.monthRange(month);
-    const rows = await this.prisma.mealAttendance.findMany({
-      where: {
-        studentId,
-        mealType: 'day',
-        status: 'present',
-        date: { gte: start, lt: end },
-      },
-      select: { date: true },
-    });
-    const marked = rows.map((r) => this.dateKey(r.date)).sort();
-    return {
-      month: label,
-      daysInMonth: days,
-      markedDates: marked,
-      daysAte: marked.length,
-      percentage: Math.round((marked.length / days) * 100),
-      summary: `Ate on ${marked.length} out of ${days} days.`,
-    };
-  }
+  /* ── Bulk over a whole month ──────────────────────────────────── */
 
-  /* ── Legacy per-meal marking (kept; unused by new calendar) ───── */
-
-  async markMeal(hostelId: string, studentId: string, dto: MarkMealDto) {
-    const date = this.parseDate(dto.date);
-    const status = dto.status ?? 'present';
-    return Promise.all(
-      dto.meals.map((mealType: MealType) =>
-        this.prisma.mealAttendance.upsert({
-          where: { studentId_date_mealType: { studentId, date, mealType } },
-          create: { hostelId, studentId, date, mealType, status, source: 'self' },
-          update: { status, markedAt: new Date() },
-        }),
-      ),
-    );
-  }
-
-  async myAttendance(studentId: string, month?: string) {
-    const { start, end } = this.monthRange(month);
-    return this.prisma.mealAttendance.findMany({
-      where: { studentId, date: { gte: start, lt: end } },
-      orderBy: { date: 'asc' },
-    });
-  }
-
-  /** Day-based monthly stats (drives student dashboard + reports). */
-  async myStats(studentId: string, month?: string) {
-    const { start, end, days, label } = this.monthRange(month);
-    const rows = await this.prisma.mealAttendance.findMany({
-      where: {
-        studentId,
-        mealType: 'day',
-        status: 'present',
-        date: { gte: start, lt: end },
-      },
-      select: { date: true },
-    });
-    const daysAte = new Set(rows.map((r) => this.dateKey(r.date))).size;
-    return {
-      month: label,
-      daysInMonth: days,
-      daysWithMeal: daysAte,
-      daysAte,
-      mealsTaken: daysAte,
-      percentage: Math.round((daysAte / days) * 100),
-      summary: `You ate on ${daysAte} out of ${days} days.`,
-    };
-  }
-
-  async statsForStudent(hostelId: string, studentId: string, month?: string) {
-    return this.myStats(studentId, month);
-  }
-
-  /** Warden view of one student's month calendar (read-only). */
-  async studentMonthForWarden(
+  async bulk(
     hostelId: string,
     studentId: string,
-    month?: string,
+    month: string | undefined,
+    meal: BulkMeal,
+    marked: boolean,
   ) {
+    const { year, mon, start, end, days } = this.monthRange(month);
+    const meals: Meal[] = meal === 'both' ? ['lunch', 'dinner'] : [meal];
+
+    if (marked) {
+      const dates = this.allMonthDates(year, mon, days);
+      const rows = dates.flatMap((date) =>
+        meals.map((mealType) => ({
+          hostelId,
+          studentId,
+          date,
+          mealType,
+          status: 'present' as const,
+          source: 'self' as const,
+        })),
+      );
+      // Unique (studentId,date,mealType) → skip existing.
+      await this.prisma.mealAttendance.createMany({
+        data: rows,
+        skipDuplicates: true,
+      });
+    } else {
+      await this.prisma.mealAttendance.deleteMany({
+        where: {
+          studentId,
+          mealType: { in: meals },
+          date: { gte: start, lt: end },
+        },
+      });
+    }
+    return this.monthData(studentId, month);
+  }
+
+  /* ── Read a student's month as a per-day meal map ─────────────── */
+
+  async monthData(studentId: string, month?: string) {
+    const { start, end, days, label } = this.monthRange(month);
+    const rows = await this.prisma.mealAttendance.findMany({
+      where: {
+        studentId,
+        mealType: { in: ['lunch', 'dinner'] },
+        status: 'present',
+        date: { gte: start, lt: end },
+      },
+      select: { date: true, mealType: true },
+    });
+
+    const map: Record<string, { lunch: boolean; dinner: boolean; breakfast: boolean }> =
+      {};
+    for (const r of rows) {
+      const k = this.dateKey(r.date);
+      if (!map[k]) map[k] = { lunch: false, dinner: false, breakfast: false };
+      if (r.mealType === 'lunch') map[k].lunch = true;
+      if (r.mealType === 'dinner') map[k].dinner = true;
+    }
+    // Breakfast is derived: on if lunch OR dinner.
+    for (const k of Object.keys(map)) {
+      map[k].breakfast = map[k].lunch || map[k].dinner;
+    }
+
+    const daysAte = Object.keys(map).length;
+    return {
+      month: label,
+      daysInMonth: days,
+      days: map,
+      daysAte,
+      percentage: Math.round((daysAte / days) * 100),
+      summary: `Ate on ${daysAte} out of ${days} days.`,
+    };
+  }
+
+  /** Dashboard stats (day counts). */
+  async myStats(studentId: string, month?: string) {
+    const data = await this.monthData(studentId, month);
+    return {
+      month: data.month,
+      daysInMonth: data.daysInMonth,
+      daysAte: data.daysAte,
+      daysWithMeal: data.daysAte,
+      mealsTaken: data.daysAte,
+      percentage: data.percentage,
+      summary: `You ate on ${data.daysAte} out of ${data.daysInMonth} days.`,
+    };
+  }
+
+  async studentMonthForWarden(hostelId: string, studentId: string, month?: string) {
     const student = await this.prisma.user.findFirst({
       where: { id: studentId, hostelId, role: 'student' },
       include: { studentProfile: true },
     });
     if (!student) return null;
-    const data = await this.monthDays(studentId, month);
+    const data = await this.monthData(studentId, month);
     return {
       student: {
         id: student.id,
@@ -177,20 +197,59 @@ export class MealsService {
     };
   }
 
-  /** Count of distinct students who marked a day-tick today. */
   async ateTodayCount(hostelId: string) {
     const today = this.parseDate();
     const rows = await this.prisma.mealAttendance.findMany({
-      where: { hostelId, mealType: 'day', status: 'present', date: today },
+      where: {
+        hostelId,
+        mealType: { in: ['lunch', 'dinner'] },
+        status: 'present',
+        date: today,
+      },
       select: { studentId: true },
     });
     return new Set(rows.map((r) => r.studentId)).size;
   }
 
-  async todaySessions(hostelId: string) {
-    const today = this.parseDate();
-    return this.prisma.mealSession.findMany({
-      where: { hostelId, date: today },
+  /* ── Export data (all active students × days × meals) ─────────── */
+
+  async exportMatrix(hostelId: string, month?: string) {
+    const { start, end, days, label } = this.monthRange(month);
+
+    const students = await this.prisma.user.findMany({
+      where: { hostelId, role: 'student', status: 'active', deletedAt: null },
+      include: { studentProfile: true },
+      orderBy: { fullName: 'asc' },
     });
+
+    const rows = await this.prisma.mealAttendance.findMany({
+      where: {
+        hostelId,
+        mealType: { in: ['lunch', 'dinner'] },
+        status: 'present',
+        date: { gte: start, lt: end },
+      },
+      select: { studentId: true, date: true, mealType: true },
+    });
+
+    // studentId -> dayNumber -> {lunch,dinner}
+    const byStudent: Record<string, Record<number, { lunch: boolean; dinner: boolean }>> =
+      {};
+    for (const r of rows) {
+      const day = r.date.getUTCDate();
+      (byStudent[r.studentId] ??= {})[day] ??= { lunch: false, dinner: false };
+      if (r.mealType === 'lunch') byStudent[r.studentId][day].lunch = true;
+      if (r.mealType === 'dinner') byStudent[r.studentId][day].dinner = true;
+    }
+
+    return {
+      month: label,
+      days,
+      students: students.map((s) => ({
+        name: s.fullName,
+        roomNumber: s.studentProfile?.roomNumber ?? '',
+        perDay: byStudent[s.id] ?? {},
+      })),
+    };
   }
 }

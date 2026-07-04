@@ -5,12 +5,16 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
 import { Card, Muted } from '@/src/components/ui';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
+import { MealDayModal } from '@/src/components/MealDayModal';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
+
+type DayMap = Record<string, { lunch: boolean; dinner: boolean; breakfast: boolean }>;
 
 export default function StudentMealsWardenView() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [cursor, setCursor] = useState(() => new Date());
+  const [selected, setSelected] = useState<string | null>(null);
   const month = monthKey(cursor);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -19,7 +23,11 @@ export default function StudentMealsWardenView() {
       (await api.get(`/meals/student/${id}`, { params: { month } })).data,
   });
 
-  const marked = new Set<string>(data?.markedDates ?? []);
+  const days: DayMap = data?.days ?? {};
+  const marked = new Set<string>(Object.keys(days));
+  const selState = selected
+    ? days[selected] ?? { lunch: false, dinner: false, breakfast: false }
+    : { lunch: false, dinner: false, breakfast: false };
 
   function shift(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
@@ -51,10 +59,10 @@ export default function StudentMealsWardenView() {
           </Card>
 
           <Card>
-            {/* Read-only: no onToggle */}
             <MonthCalendar
               monthDate={cursor}
               marked={marked}
+              onDayPress={setSelected}
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
             />
@@ -74,6 +82,14 @@ export default function StudentMealsWardenView() {
           </Card>
         </>
       )}
+
+      <MealDayModal
+        visible={selected !== null}
+        dateStr={selected}
+        state={selState}
+        editable={false}
+        onClose={() => setSelected(null)}
+      />
     </ScrollView>
   );
 }

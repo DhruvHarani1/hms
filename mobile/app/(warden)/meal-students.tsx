@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { Alert, FlatList, Linking, Pressable, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
-import { Card, Field, Muted } from '@/src/components/ui';
+import { API_URL } from '@/src/lib/config';
+import { Button, Card, Field, Muted } from '@/src/components/ui';
+import { monthKey } from '@/src/components/MonthCalendar';
 import {
   EmptyState,
   ErrorState,
@@ -14,6 +16,23 @@ import { colors } from '@/src/lib/theme';
 export default function MealStudents() {
   const router = useRouter();
   const [q, setQ] = useState('');
+  const [exporting, setExporting] = useState(false);
+
+  async function exportExcel() {
+    setExporting(true);
+    try {
+      const month = monthKey(new Date());
+      const res = await api.post('/meals/export-link', { month });
+      const url = `${API_URL}/meals/export?month=${month}&token=${res.data.token}`;
+      const ok = await Linking.canOpenURL(url);
+      if (ok) await Linking.openURL(url);
+      else Alert.alert('Cannot open', url);
+    } catch (e: any) {
+      Alert.alert('Export failed', e?.response?.data?.message ?? 'Try again.');
+    } finally {
+      setExporting(false);
+    }
+  }
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['meal-students', q],
     queryFn: async () =>
@@ -23,7 +42,12 @@ export default function MealStudents() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen options={{ title: 'Meal attendance' }} />
-      <View style={{ padding: 16 }}>
+      <View style={{ padding: 16, gap: 12 }}>
+        <Button
+          title={exporting ? 'Preparing…' : '⬇️  Export this month to Excel'}
+          onPress={exportExcel}
+          loading={exporting}
+        />
         <Field
           placeholder="Search students…"
           value={q}

@@ -26,13 +26,13 @@ function todayKey(): string {
 export function MonthCalendar({
   monthDate,
   marked,
-  onToggle,
+  onDayPress,
   onPrev,
   onNext,
 }: {
   monthDate: Date;
   marked: Set<string>;
-  onToggle?: (dateStr: string) => void;
+  onDayPress?: (dateStr: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
 }) {
@@ -107,8 +107,8 @@ export function MonthCalendar({
               }}
             >
               <Pressable
-                disabled={!onToggle}
-                onPress={() => onToggle?.(key)}
+                disabled={!onDayPress}
+                onPress={() => onDayPress?.(key)}
                 style={{
                   flex: 1,
                   borderRadius: radius.md,

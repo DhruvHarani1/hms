@@ -1,35 +1,33 @@
 import {
-  ArrayNotEmpty,
-  IsArray,
   IsBoolean,
   IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
-import { MealType } from '@prisma/client';
 
-/** Mark/unmark a single calendar day (one tick per day). */
-export class MarkDayDto {
+/** Mark/unmark a single meal (lunch or dinner) on a date. Breakfast derived. */
+export class MarkMealDto {
   @IsString()
   @IsNotEmpty()
   date: string; // "YYYY-MM-DD"
+
+  @IsIn(['lunch', 'dinner'])
+  meal: 'lunch' | 'dinner';
 
   @IsBoolean()
   marked: boolean;
 }
 
-export class MarkMealDto {
-  /** ISO date string (yyyy-mm-dd). Defaults to today when omitted. */
+/** Bulk mark/unmark across a whole month. */
+export class BulkMealDto {
   @IsOptional()
-  date?: string;
+  @IsString()
+  month?: string; // "YYYY-MM"
 
-  @IsArray()
-  @ArrayNotEmpty()
-  @IsIn(['breakfast', 'lunch', 'dinner'], { each: true })
-  meals: MealType[];
+  @IsIn(['lunch', 'dinner', 'both'])
+  meal: 'lunch' | 'dinner' | 'both';
 
-  @IsOptional()
-  @IsIn(['present', 'absent', 'opted_out'])
-  status?: 'present' | 'absent' | 'opted_out';
+  @IsBoolean()
+  marked: boolean;
 }
