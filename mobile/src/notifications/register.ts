@@ -15,6 +15,8 @@ import { api } from '@/src/lib/api';
 const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 export async function registerForPush(): Promise<void> {
+  // Web: native push modules don't apply — rely on the in-app inbox.
+  if (Platform.OS === 'web') return;
   if (isExpoGo) {
     // Expo Go: remote push unsupported — no-op. In-app inbox covers the demo.
     return;

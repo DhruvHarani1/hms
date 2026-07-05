@@ -25,6 +25,16 @@
         "backgroundColor": "#ffffff"
       }
     },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/icon.png",
+      "name": "AIFDMS Hostel App",
+      "shortName": "AIFDMS",
+      "themeColor": "#4f46e5",
+      "backgroundColor": "#ffffff",
+      "display": "standalone"
+    },
     "plugins": [
       "expo-router",
       "expo-secure-store",
