@@ -1,3 +1,7 @@
 name = "aifdms-hostel"
 compatibility_date = "2025-01-01"
-pages_build_output_dir = "mobile/dist"
+
+# Serve the exported web app as static assets (no server code).
+[assets]
+directory = "mobile/dist"
+not_found_handling = "single-page-application"
