@@ -26,12 +26,14 @@ function todayKey(): string {
 export function MonthCalendar({
   monthDate,
   marked,
+  dangerDates,
   onDayPress,
   onPrev,
   onNext,
 }: {
   monthDate: Date;
   marked: Set<string>;
+  dangerDates?: Set<string>;
   onDayPress?: (dateStr: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
@@ -96,6 +98,7 @@ export function MonthCalendar({
           }
           const key = `${year}-${pad(month + 1)}-${pad(d)}`;
           const on = marked.has(key);
+          const danger = dangerDates?.has(key) ?? false;
           const isToday = key === today;
           return (
             <View
@@ -114,18 +117,24 @@ export function MonthCalendar({
                   borderRadius: radius.md,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: on ? colors.primary : colors.card,
+                  backgroundColor: danger
+                    ? colors.danger
+                    : on
+                      ? colors.primary
+                      : colors.card,
                   borderWidth: isToday ? 2 : 1,
                   borderColor: isToday
                     ? colors.primary
-                    : on
-                      ? colors.primary
-                      : colors.border,
+                    : danger
+                      ? colors.danger
+                      : on
+                        ? colors.primary
+                        : colors.border,
                 }}
               >
                 <Text
                   style={{
-                    color: on ? '#fff' : colors.text,
+                    color: danger || on ? '#fff' : colors.text,
                     fontWeight: isToday ? '800' : '600',
                   }}
                 >

@@ -48,6 +48,16 @@ export default function WardenMore() {
         variant="outline"
         onPress={() => router.push('/(warden)/meal-students')}
       />
+      <Button
+        title="📋  Attendance"
+        variant="outline"
+        onPress={() => router.push('/(warden)/attendance-students')}
+      />
+      <Button
+        title="🏖️  Leave requests"
+        variant="outline"
+        onPress={() => router.push('/(warden)/leaves')}
+      />
 
       <H1>Post a Notice</H1>
       <Card style={{ gap: 12 }}>

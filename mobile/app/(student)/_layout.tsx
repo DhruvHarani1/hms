@@ -33,6 +33,10 @@ export default function StudentLayout() {
         options={{ title: 'Meals', tabBarIcon: icon('🍽️') }}
       />
       <Tabs.Screen
+        name="attendance"
+        options={{ title: 'Attend', tabBarIcon: icon('📋') }}
+      />
+      <Tabs.Screen
         name="complaints"
         options={{ title: 'Complaints', tabBarIcon: icon('📝') }}
       />

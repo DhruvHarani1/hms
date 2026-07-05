@@ -121,6 +121,8 @@ model Hostel {
   complaintCategories  ComplaintCategory[]
   notices              Notice[]
   auditLogs            AuditLog[]
+  attendances          Attendance[]
+  leaves               LeaveRequest[]
 
   @@map("hostels")
 }
@@ -149,6 +151,8 @@ model User {
   deviceTokens           DeviceToken[]
   notificationRecipients NotificationRecipient[]
   mealAttendances        MealAttendance[]
+  attendances            Attendance[]
+  leaves                 LeaveRequest[]
   complaints             Complaint[]
   complaintReplies       ComplaintReply[]
   assignedComplaints     Complaint[]              @relation("ComplaintAssignee")
@@ -385,6 +389,46 @@ model ComplaintAttachment {
 
   @@index([complaintId])
   @@map("complaint_attachments")
+}
+
+// ─────────────────────────── Attendance ───────────────────────────
+// Default is PRESENT. A row here means the student was ABSENT that day
+// (either self-marked or auto-created by a leave). No row = present.
+
+model Attendance {
+  id        String   @id @default(uuid())
+  hostelId  String   @map("hostel_id")
+  studentId String   @map("student_id")
+  date      DateTime @db.Date
+  viaLeave  Boolean  @default(false) @map("via_leave")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hostel  Hostel @relation(fields: [hostelId], references: [id])
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([hostelId, date])
+  @@map("attendance")
+}
+
+// ─────────────────────────── Leave ───────────────────────────
+
+model LeaveRequest {
+  id        String   @id @default(uuid())
+  hostelId  String   @map("hostel_id")
+  studentId String   @map("student_id")
+  startDate DateTime @db.Date @map("start_date")
+  endDate   DateTime @db.Date @map("end_date")
+  reason    String
+  status    String   @default("applied") // auto-applied; kept for future workflow
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hostel  Hostel @relation(fields: [hostelId], references: [id])
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([hostelId])
+  @@index([studentId])
+  @@map("leave_requests")
 }
 
 // ─────────────────────────── Notices ───────────────────────────

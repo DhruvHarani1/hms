@@ -6,6 +6,8 @@ import { UsersModule } from './modules/users/users.module';
 import { StudentsModule } from './modules/students/students.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { MealsModule } from './modules/meals/meals.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { LeavesModule } from './modules/leaves/leaves.module';
 import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { NoticesModule } from './modules/notices/notices.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -19,6 +21,8 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     StudentsModule,
     NotificationsModule,
     MealsModule,
+    AttendanceModule,
+    LeavesModule,
     ComplaintsModule,
     NoticesModule,
     DashboardModule,

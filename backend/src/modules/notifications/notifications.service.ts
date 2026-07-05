@@ -121,6 +121,52 @@ export class NotificationsService {
     });
   }
 
+  /** Notify all wardens/staff of a hostel (e.g. a new leave request). */
+  async notifyWardens(
+    hostelId: string,
+    title: string,
+    body: string,
+    data?: Record<string, any>,
+    createdBy?: string,
+  ) {
+    const wardens = await this.prisma.user.findMany({
+      where: {
+        hostelId,
+        role: { in: ['warden', 'staff'] },
+        status: 'active',
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (wardens.length === 0) return { notified: 0 };
+
+    const notification = await this.prisma.notification.create({
+      data: {
+        hostelId,
+        type: 'individual',
+        title,
+        body,
+        data: data ?? {},
+        priority: 'high',
+        audience: 'individual',
+        createdBy,
+        recipients: { create: wardens.map((w) => ({ userId: w.id })) },
+      },
+    });
+
+    const tokens = await this.prisma.deviceToken.findMany({
+      where: { userId: { in: wardens.map((w) => w.id) } },
+      select: { token: true },
+    });
+    await this.push.sendToTokens(
+      tokens.map((t) => t.token),
+      title,
+      body,
+      { notificationId: notification.id, type: 'individual', ...data },
+    );
+    return { notified: wardens.length };
+  }
+
   async sendAnnouncement(
     hostelId: string,
     wardenId: string,

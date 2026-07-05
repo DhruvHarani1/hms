@@ -60,6 +60,9 @@ export default function WardenLayout() {
       {/* Not in tab bar — reached via navigation */}
       <Tabs.Screen name="meal-students" options={{ href: null }} />
       <Tabs.Screen name="student-meals" options={{ href: null }} />
+      <Tabs.Screen name="attendance-students" options={{ href: null }} />
+      <Tabs.Screen name="student-attendance" options={{ href: null }} />
+      <Tabs.Screen name="leaves" options={{ href: null }} />
     </Tabs>
   );
 }
