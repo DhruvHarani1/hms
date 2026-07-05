@@ -2,6 +2,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { Text } from 'react-native';
 import { colors } from '@/src/lib/theme';
 import { BellButton } from '@/src/components/primitives';
+import { HeaderLogo } from '@/src/components/HeaderLogo';
 import { useUnread } from '@/src/hooks/useUnread';
 
 function icon(emoji: string) {
@@ -26,7 +27,12 @@ export default function StudentLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Home', tabBarIcon: icon('🏠'), headerRight: bell }}
+        options={{
+          title: 'Home',
+          tabBarIcon: icon('🏠'),
+          headerTitle: () => <HeaderLogo />,
+          headerRight: bell,
+        }}
       />
       <Tabs.Screen
         name="meals"
