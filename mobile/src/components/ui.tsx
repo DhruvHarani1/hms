@@ -81,25 +81,42 @@ export function Button({
 }
 
 export function Field(props: TextInputProps & { label?: string }) {
-  const { label, ...rest } = props;
+  const { label, secureTextEntry, ...rest } = props;
+  // For password fields, show an eye button to toggle visibility.
+  const [hidden, setHidden] = React.useState(!!secureTextEntry);
+  const isPassword = !!secureTextEntry;
+
   return (
     <View style={{ gap: 6 }}>
       {label ? (
         <Text style={{ color: colors.muted, fontWeight: '600' }}>{label}</Text>
       ) : null}
-      <TextInput
-        placeholderTextColor={colors.muted}
-        {...rest}
-        style={{
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 12,
-          padding: 14,
-          fontSize: 16,
-          backgroundColor: '#fff',
-          color: colors.text,
-        }}
-      />
+      <View style={{ justifyContent: 'center' }}>
+        <TextInput
+          placeholderTextColor={colors.muted}
+          secureTextEntry={isPassword ? hidden : false}
+          {...rest}
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 12,
+            padding: 14,
+            paddingRight: isPassword ? 52 : 14,
+            fontSize: 16,
+            backgroundColor: '#fff',
+            color: colors.text,
+          }}
+        />
+        {isPassword ? (
+          <Pressable
+            onPress={() => setHidden((h) => !h)}
+            hitSlop={10}
+            style={{ position: 'absolute', right: 14 }}
+          >
+            <Text style={{ fontSize: 18 }}>{hidden ? '👁️' : '🙈'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
