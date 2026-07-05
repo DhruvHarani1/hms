@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "Hostel App",
+    "name": "AIFDMS Hostel App",
     "slug": "hms-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "hmsapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4f46e5"
+      "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,7 +21,8 @@
       "package": "test.hms.mobile",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#4f46e5"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       }
     },
     "plugins": [

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, Image, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
@@ -55,8 +55,12 @@ export default function Register() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 14 }}>
         <View style={{ alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <Text style={{ fontSize: 40 }}>🏨</Text>
-          <H1>Join the hostel</H1>
+          <Image
+            source={require('../../assets/logo.jpg')}
+            style={{ width: 110, height: 110, borderRadius: 18 }}
+            resizeMode="contain"
+          />
+          <H1>Join AIFDMS Hostel</H1>
           <Muted>Create an account — warden approves before first login.</Muted>
         </View>
 

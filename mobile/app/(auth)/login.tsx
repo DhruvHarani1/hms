@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, View, Text } from 'react-native';
+import { Alert, Image, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/stores/auth';
@@ -34,8 +34,12 @@ export default function Login() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ flex: 1, padding: 24, justifyContent: 'center', gap: 20 }}>
         <View style={{ alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <Text style={{ fontSize: 48 }}>🏨</Text>
-          <H1>Hostel App</H1>
+          <Image
+            source={require('../../assets/logo.jpg')}
+            style={{ width: 160, height: 160, borderRadius: 24 }}
+            resizeMode="contain"
+          />
+          <H1>AIFDMS Hostel App</H1>
           <Muted>Sign in to continue</Muted>
         </View>
 
@@ -62,9 +66,19 @@ export default function Login() {
           onPress={() => router.push('/(auth)/register')}
         />
 
-        <Muted>
-          Demo — warden@hostel.test / aarav@hostel.test · Password123!
-        </Muted>
+        <Text
+          style={{
+            textAlign: 'center',
+            marginTop: 8,
+            fontSize: 18,
+            fontWeight: '800',
+            color: colors.primary,
+            letterSpacing: 1,
+          }}
+        >
+          ॥ जय महेश ॥
+        </Text>
+        <Muted>New students: tap Sign up — the warden approves your request.</Muted>
       </View>
     </SafeAreaView>
   );
