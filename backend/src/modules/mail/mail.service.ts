@@ -1,33 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 
 /**
- * SMTP email via nodemailer. Env:
- *   SMTP_HOST, SMTP_PORT, SMTP_SECURE(true/false), SMTP_USER, SMTP_PASS, MAIL_FROM
- * Works with Gmail (app password) or Brevo/any SMTP. If unset, emails are
- * logged instead of sent (dev fallback).
+ * Email via Brevo HTTP API (https://api.brevo.com — port 443, never blocked
+ * by hosts that block SMTP ports like Render free). Env:
+ *   BREVO_API_KEY   — Brevo transactional API key (xkeysib-...)
+ *   MAIL_FROM       — sender email (must be a verified Brevo sender)
+ *   MAIL_FROM_NAME  — sender display name (optional, default "AIFDMS Hostel")
+ * If unset, emails are logged instead of sent (dev fallback).
  */
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter | null = null;
 
   isConfigured(): boolean {
-    return !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-  }
-
-  private get() {
-    if (this.transporter) return this.transporter;
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000,
-    });
-    return this.transporter;
+    return !!(process.env.BREVO_API_KEY && process.env.MAIL_FROM);
   }
 
   async sendResetCode(to: string, code: string) {
@@ -44,13 +30,30 @@ export class MailService {
       this.logger.warn(`[mail:dev] reset code for ${to}: ${code}`);
       return;
     }
-    await this.get().sendMail({
-      from: process.env.MAIL_FROM || process.env.SMTP_USER,
-      to,
-      subject,
-      text,
-      html,
+
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY as string,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          email: process.env.MAIL_FROM,
+          name: process.env.MAIL_FROM_NAME || 'AIFDMS Hostel',
+        },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+        textContent: text,
+      }),
     });
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`Brevo ${res.status}: ${body.slice(0, 200)}`);
+    }
   }
 
   /** Branded, email-client-safe HTML (inline styles + tables). */
