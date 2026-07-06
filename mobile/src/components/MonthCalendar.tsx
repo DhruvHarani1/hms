@@ -30,6 +30,7 @@ export function MonthCalendar({
   onDayPress,
   onPrev,
   onNext,
+  onTitlePress,
 }: {
   monthDate: Date;
   marked: Set<string>;
@@ -37,6 +38,7 @@ export function MonthCalendar({
   onDayPress?: (dateStr: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
+  onTitlePress?: () => void;
 }) {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth(); // 0-based
@@ -66,9 +68,12 @@ export function MonthCalendar({
         }}
       >
         <NavBtn label="‹" onPress={onPrev} />
-        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
-          {monthLabel}
-        </Text>
+        <Pressable onPress={onTitlePress} hitSlop={8} disabled={!onTitlePress}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: onTitlePress ? colors.primary : colors.text }}>
+            {monthLabel}
+            {onTitlePress ? '  ▾' : ''}
+          </Text>
+        </Pressable>
         <NavBtn label="›" onPress={onNext} />
       </View>
 
