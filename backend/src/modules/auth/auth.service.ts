@@ -124,26 +124,32 @@ export class AuthService {
       );
     }
 
+    const role = dto.role === 'cook' ? 'cook' : 'student';
     await this.prisma.user.create({
       data: {
         hostelId: hostel.id,
-        role: 'student',
+        role,
         fullName: dto.fullName,
         email,
         phone: dto.phone,
         passwordHash,
         status: 'pending',
-        studentProfile: {
-          create: {
-            hostelId: hostel.id,
-            rollNo: dto.rollNo,
-            roomNumber: dto.roomNumber,
-          },
-        },
+        // Only students get a profile record.
+        ...(role === 'student'
+          ? {
+              studentProfile: {
+                create: {
+                  hostelId: hostel.id,
+                  rollNo: dto.rollNo,
+                  roomNumber: dto.roomNumber,
+                },
+              },
+            }
+          : {}),
       },
     });
 
-    return { status: 'pending', reapplied: false };
+    return { status: 'pending', reapplied: false, role };
   }
 
   async login(dto: LoginDto) {

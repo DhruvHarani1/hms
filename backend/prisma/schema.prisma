@@ -19,6 +19,7 @@ enum Role {
   warden
   staff
   student
+  cook
 }
 
 enum UserStatus {
@@ -123,6 +124,7 @@ model Hostel {
   auditLogs            AuditLog[]
   attendances          Attendance[]
   leaves               LeaveRequest[]
+  dishes               Dish[]
 
   @@map("hostels")
 }
@@ -325,6 +327,20 @@ model MealSession {
   @@unique([hostelId, date, mealType])
   @@index([hostelId])
   @@map("meal_sessions")
+}
+
+// Master dish list — a separate list per meal type (breakfast/lunch/dinner).
+model Dish {
+  id        String   @id @default(uuid())
+  hostelId  String   @map("hostel_id")
+  mealType  MealType @map("meal_type")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+
+  @@index([hostelId, mealType])
+  @@map("dishes")
 }
 
 model MealAttendance {

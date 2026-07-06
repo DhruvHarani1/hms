@@ -44,6 +44,11 @@ export default function WardenMore() {
       </Card>
 
       <Button
+        title="🍲  Set today's menu"
+        variant="outline"
+        onPress={() => router.push('/(warden)/menu')}
+      />
+      <Button
         title="🍽️  Meal attendance"
         variant="outline"
         onPress={() => router.push('/(warden)/meal-students')}

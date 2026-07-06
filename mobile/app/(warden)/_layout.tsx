@@ -70,6 +70,7 @@ export default function WardenLayout() {
       <Tabs.Screen name="student-attendance" options={{ href: null }} />
       <Tabs.Screen name="leaves" options={{ href: null }} />
       <Tabs.Screen name="student-profile" options={{ href: null }} />
+      <Tabs.Screen name="menu" options={{ href: null }} />
     </Tabs>
   );
 }

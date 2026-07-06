@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -12,8 +14,10 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
+import { IsIn, IsArray, IsString, IsNotEmpty } from 'class-validator';
 import { MealsService } from './meals.service';
 import { MealExportService } from './meal-export.service';
+import { MealMenuService } from './meal-menu.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import {
@@ -22,13 +26,74 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { BulkMealDto, MarkMealDto } from './dto/meals.dto';
 
+class DishDto {
+  @IsIn(['breakfast', 'lunch', 'dinner'])
+  mealType: 'breakfast' | 'lunch' | 'dinner';
+
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+}
+
+class SetMenuDto {
+  @IsIn(['breakfast', 'lunch', 'dinner'])
+  mealType: 'breakfast' | 'lunch' | 'dinner';
+
+  @IsArray()
+  @IsString({ each: true })
+  dishes: string[];
+}
+
 @Controller('meals')
 export class MealsController {
   constructor(
     private readonly service: MealsService,
     private readonly exporter: MealExportService,
+    private readonly menu: MealMenuService,
     private readonly jwt: JwtService,
   ) {}
+
+  // ── Dish master lists + daily menu ──
+  @Roles('warden', 'staff')
+  @Get('dishes')
+  listDishes(@CurrentUser() user: AuthUser, @Query('mealType') mealType: any) {
+    return this.menu.listDishes(user.hostelId, mealType);
+  }
+
+  @Roles('warden', 'staff')
+  @Post('dishes')
+  addDish(@CurrentUser() user: AuthUser, @Body() dto: DishDto) {
+    return this.menu.addDish(user.hostelId, dto.mealType, dto.name);
+  }
+
+  @Roles('warden', 'staff')
+  @Patch('dishes/:id')
+  updateDish(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body('name') name: string,
+  ) {
+    return this.menu.updateDish(user.hostelId, id, name);
+  }
+
+  @Roles('warden', 'staff')
+  @Delete('dishes/:id')
+  deleteDish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.menu.deleteDish(user.hostelId, id);
+  }
+
+  @Roles('warden', 'staff')
+  @Post('menu')
+  @HttpCode(200)
+  setMenu(@CurrentUser() user: AuthUser, @Body() dto: SetMenuDto) {
+    return this.menu.setMenu(user.hostelId, user.userId, dto.mealType, dto.dishes);
+  }
+
+  /** Today's menu — any logged-in user (student view, cook view). */
+  @Get('menu')
+  todayMenu(@CurrentUser() user: AuthUser) {
+    return this.menu.getTodayMenu(user.hostelId);
+  }
 
   // ── Student: mark one meal on a day ──
   @Post('mark')

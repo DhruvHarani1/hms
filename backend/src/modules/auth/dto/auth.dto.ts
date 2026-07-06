@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -26,6 +27,10 @@ export class RegisterDto {
   @IsString()
   @MinLength(8)
   password: string;
+
+  @IsOptional()
+  @IsIn(['student', 'cook'])
+  role?: 'student' | 'cook';
 
   @IsOptional()
   @IsString()

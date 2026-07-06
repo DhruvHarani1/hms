@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { api } from '@/src/lib/api';
 import { tokenStore } from '@/src/lib/storage';
 
-export type Role = 'warden' | 'staff' | 'student' | 'super_admin';
+export type Role = 'warden' | 'staff' | 'student' | 'super_admin' | 'cook';
 
 export interface AuthUser {
   id: string;

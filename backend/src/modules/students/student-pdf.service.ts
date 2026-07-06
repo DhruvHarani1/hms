@@ -1,10 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import PDFDocument from 'pdfkit';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class StudentPdfService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private uploads: UploadsService,
+  ) {}
+
+  /** Fetch a stored document as a Buffer (via signed URL). Null on failure. */
+  private async fetchImage(key?: string | null): Promise<Buffer | null> {
+    if (!key || !this.uploads.isConfigured()) return null;
+    try {
+      const url = this.uploads.signedViewUrl(key);
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const ab = await res.arrayBuffer();
+      return Buffer.from(ab);
+    } catch {
+      return null;
+    }
+  }
 
   async build(hostelId: string, studentId: string): Promise<Buffer> {
     const s = await this.prisma.user.findFirst({
@@ -90,6 +108,27 @@ export class StudentPdfService {
         `Generated ${new Date().toISOString().slice(0, 10)} · AIFDMS Hostel App`,
         { align: 'center' },
       );
+
+    // Pages 2-4: document images (only if uploaded).
+    const [photo, aadhaar, course] = await Promise.all([
+      this.fetchImage(p?.photoKey),
+      this.fetchImage(p?.aadhaarKey),
+      this.fetchImage(p?.courseProofKey),
+    ]);
+    const imagePage = (title: string, buf: Buffer | null) => {
+      if (!buf) return;
+      doc.addPage();
+      doc.fontSize(14).fillColor('#4f46e5').text(title, { align: 'center' });
+      doc.moveDown(1);
+      try {
+        doc.image(buf, { fit: [460, 640], align: 'center', valign: 'center' });
+      } catch {
+        doc.fontSize(10).fillColor('#dc2626').text('Could not render image.');
+      }
+    };
+    imagePage('Profile Photo', photo);
+    imagePage('Aadhaar Card', aadhaar);
+    imagePage('Course Proof', course);
 
     doc.end();
     return done;

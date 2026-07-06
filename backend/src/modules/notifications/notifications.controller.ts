@@ -25,8 +25,8 @@ import {
 export class NotificationsController {
   constructor(private readonly service: NotificationsService) {}
 
-  // ── Warden: meal quick-actions (the headline feature) ──
-  @Roles('warden', 'staff')
+  // ── Warden + Cook: meal-ready quick-actions ──
+  @Roles('warden', 'staff', 'cook')
   @Post('notifications/meal')
   @HttpCode(200)
   mealReady(@CurrentUser() user: AuthUser, @Body() dto: MealReadyDto) {

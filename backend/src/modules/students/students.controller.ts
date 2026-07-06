@@ -84,7 +84,7 @@ export class StudentsController {
     return this.prisma.user.findMany({
       where: {
         hostelId: user.hostelId,
-        role: 'student',
+        role: { in: ['student', 'cook'] },
         status: 'pending',
         deletedAt: null,
       },
@@ -97,9 +97,9 @@ export class StudentsController {
   @Patch(':id/approve')
   async approve(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     const student = await this.prisma.user.findFirst({
-      where: { id, hostelId: user.hostelId, role: 'student' },
+      where: { id, hostelId: user.hostelId, role: { in: ['student', 'cook'] } },
     });
-    if (!student) throw new BadRequestException('Student not found');
+    if (!student) throw new BadRequestException('Request not found');
     await this.prisma.user.update({
       where: { id },
       data: { status: 'active', rejectionReason: null },
@@ -115,9 +115,9 @@ export class StudentsController {
     @Body() dto: RejectDto,
   ) {
     const student = await this.prisma.user.findFirst({
-      where: { id, hostelId: user.hostelId, role: 'student' },
+      where: { id, hostelId: user.hostelId, role: { in: ['student', 'cook'] } },
     });
-    if (!student) throw new BadRequestException('Student not found');
+    if (!student) throw new BadRequestException('Request not found');
     await this.prisma.user.update({
       where: { id },
       data: { status: 'rejected', rejectionReason: dto.reason ?? null },

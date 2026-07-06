@@ -30,28 +30,22 @@ export class NotificationsService {
     private webPush: WebPushService,
   ) {}
 
-  /**
-   * Core fan-out: create one notification row, a recipient row per student,
-   * and push to every registered device. Returns how many students were notified.
-   */
-  private async fanOut(params: {
-    hostelId: string;
-    type: NotificationType;
-    title: string;
-    body: string;
-    data?: Record<string, any>;
-    priority?: NotificationPriority;
-    createdBy?: string;
-  }) {
-    const students = await this.prisma.user.findMany({
-      where: {
-        hostelId: params.hostelId,
-        role: 'student',
-        status: 'active',
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
+  /** Core: create one notification + recipient rows for the given users, then
+   *  push (device) + web push. */
+  private async notifyUsers(
+    userIds: string[],
+    params: {
+      hostelId: string;
+      type: NotificationType;
+      title: string;
+      body: string;
+      data?: Record<string, any>;
+      priority?: NotificationPriority;
+      audience?: 'all' | 'individual';
+      createdBy?: string;
+    },
+  ) {
+    if (userIds.length === 0) return { notificationId: null, notified: 0 };
 
     const notification = await this.prisma.notification.create({
       data: {
@@ -61,17 +55,14 @@ export class NotificationsService {
         body: params.body,
         data: params.data ?? {},
         priority: params.priority ?? 'normal',
-        audience: 'all',
+        audience: params.audience ?? 'all',
         createdBy: params.createdBy,
-        recipients: {
-          create: students.map((s) => ({ userId: s.id })),
-        },
+        recipients: { create: userIds.map((id) => ({ userId: id })) },
       },
     });
 
-    // Collect device tokens for all recipients and push (batched).
     const tokens = await this.prisma.deviceToken.findMany({
-      where: { userId: { in: students.map((s) => s.id) } },
+      where: { userId: { in: userIds } },
       select: { token: true },
     });
     await this.push.sendToTokens(
@@ -80,14 +71,76 @@ export class NotificationsService {
       params.body,
       { notificationId: notification.id, type: params.type, ...params.data },
     );
+    await this.webPush.sendToUsers(userIds, {
+      title: params.title,
+      body: params.body,
+      data: { type: params.type },
+    });
 
-    // Web push (browser / installed PWA incl. iOS).
-    await this.webPush.sendToUsers(
-      students.map((s) => s.id),
-      { title: params.title, body: params.body, data: { type: params.type } },
-    );
+    return { notificationId: notification.id, notified: userIds.length };
+  }
 
-    return { notificationId: notification.id, notified: students.length };
+  /** Notify all active users of a hostel matching the given roles. */
+  private async notifyRoles(
+    roles: string[],
+    params: {
+      hostelId: string;
+      type: NotificationType;
+      title: string;
+      body: string;
+      data?: Record<string, any>;
+      priority?: NotificationPriority;
+      createdBy?: string;
+    },
+  ) {
+    const users = await this.prisma.user.findMany({
+      where: {
+        hostelId: params.hostelId,
+        role: { in: roles as any },
+        status: 'active',
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    return this.notifyUsers(users.map((u) => u.id), params);
+  }
+
+  /** Students only (announcements, notices). */
+  private async fanOut(params: {
+    hostelId: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    data?: Record<string, any>;
+    priority?: NotificationPriority;
+    createdBy?: string;
+  }) {
+    return this.notifyRoles(['student'], params);
+  }
+
+  /** Everyone in the hostel (meal-ready). */
+  async notifyEveryone(params: {
+    hostelId: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    data?: Record<string, any>;
+    priority?: NotificationPriority;
+    createdBy?: string;
+  }) {
+    return this.notifyRoles(['student', 'warden', 'staff', 'cook'], params);
+  }
+
+  /** Students + cook (daily menu). */
+  async notifyStudentsAndCook(params: {
+    hostelId: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    data?: Record<string, any>;
+    createdBy?: string;
+  }) {
+    return this.notifyRoles(['student', 'cook'], params);
   }
 
   async sendMealReady(
@@ -100,25 +153,28 @@ export class NotificationsService {
     const title = `${MEAL_EMOJI[mealType]} ${label} is ready`;
     const body = menu ? `${label} is ready. Today: ${menu}` : `${label} is ready.`;
 
-    // Record/mark the meal session for today.
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Mark today's meal session ready (UTC-midnight key to match menu setting).
+    const n = new Date();
+    const today = new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
     await this.prisma.mealSession.upsert({
-      where: {
-        hostelId_date_mealType: { hostelId, date: today, mealType },
-      },
+      where: { hostelId_date_mealType: { hostelId, date: today, mealType } },
       create: {
         hostelId,
         date: today,
         mealType,
-        menu,
+        ...(menu ? { menu } : {}),
         readyMarkedAt: new Date(),
         markedBy: wardenId,
       },
-      update: { readyMarkedAt: new Date(), markedBy: wardenId, menu },
+      update: {
+        readyMarkedAt: new Date(),
+        markedBy: wardenId,
+        ...(menu ? { menu } : {}),
+      },
     });
 
-    return this.fanOut({
+    // Meal-ready → notify everyone (students + warden + cook).
+    return this.notifyEveryone({
       hostelId,
       type: 'meal',
       title,

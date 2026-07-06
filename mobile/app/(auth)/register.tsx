@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, Image, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
+import { SelectField } from '@/src/components/form';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
-import { colors } from '@/src/lib/theme';
+import { colors, radius } from '@/src/lib/theme';
 
 export default function Register() {
   const router = useRouter();
@@ -12,15 +13,19 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('Student');
   const [busy, setBusy] = useState(false);
+  // Inline messages (Alert is unreliable on web).
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   async function onSubmit() {
+    setMsg(null);
     if (!fullName || !email || !password) {
-      Alert.alert('Missing details', 'Name, email and password are required.');
+      setMsg({ kind: 'err', text: 'Name, email and password are required.' });
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Weak password', 'Use at least 8 characters.');
+      setMsg({ kind: 'err', text: 'Password must be at least 8 characters.' });
       return;
     }
     setBusy(true);
@@ -30,20 +35,20 @@ export default function Register() {
         email: email.trim().toLowerCase(),
         phone: phone || undefined,
         password,
+        role: role === 'Cook' ? 'cook' : 'student',
       });
       const reapplied = res.data?.reapplied;
-      Alert.alert(
-        '✅ Request sent',
-        reapplied
-          ? 'Your request was re-submitted. The warden will review it again.'
-          : 'Your join request was sent. You can log in once the warden approves it.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }],
-      );
+      setMsg({
+        kind: 'ok',
+        text: reapplied
+          ? '✅ Request re-submitted. The warden will review it again.'
+          : '✅ Join request sent! You can log in once the warden approves it.',
+      });
     } catch (e: any) {
-      Alert.alert(
-        'Could not register',
-        e?.response?.data?.message ?? 'Please try again.',
-      );
+      setMsg({
+        kind: 'err',
+        text: e?.response?.data?.message ?? 'Could not register. Please try again.',
+      });
     } finally {
       setBusy(false);
     }
@@ -62,6 +67,40 @@ export default function Register() {
           <Muted>Create an account — warden approves before first login.</Muted>
         </View>
 
+        {msg ? (
+          <View
+            style={{
+              padding: 14,
+              borderRadius: radius.md,
+              backgroundColor: msg.kind === 'ok' ? '#dcfce7' : '#fee2e2',
+              borderWidth: 1,
+              borderColor: msg.kind === 'ok' ? colors.success : colors.danger,
+            }}
+          >
+            <Text
+              style={{
+                color: msg.kind === 'ok' ? '#166534' : '#991b1b',
+                fontWeight: '700',
+              }}
+            >
+              {msg.text}
+            </Text>
+            {msg.kind === 'ok' ? (
+              <Pressable onPress={() => router.replace('/(auth)/login')} style={{ marginTop: 8 }}>
+                <Text style={{ color: colors.primary, fontWeight: '800' }}>
+                  Go to login →
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        <SelectField
+          label="I am a"
+          value={role}
+          options={['Student', 'Cook']}
+          onChange={setRole}
+        />
         <Field label="Full name" value={fullName} onChangeText={setFullName} />
         <Field
           label="Email"

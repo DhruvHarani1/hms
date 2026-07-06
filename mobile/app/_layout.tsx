@@ -9,6 +9,12 @@ import { colors } from '@/src/lib/theme';
 
 const queryClient = new QueryClient();
 
+function homeFor(role: string) {
+  if (role === 'student') return '/(student)';
+  if (role === 'cook') return '/(cook)';
+  return '/(warden)';
+}
+
 function AuthGate() {
   const { user, initialized, bootstrap } = useAuth();
   const segments = useSegments();
@@ -26,11 +32,9 @@ function AuthGate() {
       router.replace('/(auth)/login');
     } else if (user && inAuthGroup) {
       // Route by role.
-      if (user.role === 'student') router.replace('/(student)');
-      else router.replace('/(warden)');
+      router.replace(homeFor(user.role));
     } else if (user && (segments as string[]).length === 0) {
-      if (user.role === 'student') router.replace('/(student)');
-      else router.replace('/(warden)');
+      router.replace(homeFor(user.role));
     }
   }, [user, initialized, segments]);
 
@@ -54,6 +58,7 @@ function AuthGate() {
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(warden)" />
       <Stack.Screen name="(student)" />
+      <Stack.Screen name="(cook)" />
       <Stack.Screen name="notifications" options={{ headerShown: true }} />
     </Stack>
   );

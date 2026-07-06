@@ -23,6 +23,11 @@ export default function StudentMeals() {
       (await api.get('/meals/me', { params: { month } })).data,
   });
 
+  const { data: menu } = useQuery({
+    queryKey: ['today-menu'],
+    queryFn: async () => (await api.get('/meals/menu')).data,
+  });
+
   const days: DayMap = data?.days ?? {};
   const marked = new Set<string>(Object.keys(days)); // day is "ate" if any meal
 
@@ -74,6 +79,23 @@ export default function StudentMeals() {
       contentContainerStyle={{ padding: 16, gap: 16 }}
     >
       <H1>My Meals</H1>
+
+      <Card style={{ gap: 6 }}>
+        <Text style={{ fontWeight: '800', color: colors.text }}>Today's Menu</Text>
+        {(['breakfast', 'lunch', 'dinner'] as const).map((m) => {
+          const emoji = m === 'breakfast' ? '🍳' : m === 'lunch' ? '🍛' : '🌙';
+          const items = menu?.[m] ?? [];
+          return (
+            <View key={m} style={{ flexDirection: 'row', gap: 6 }}>
+              <Text>{emoji}</Text>
+              <Text style={{ color: items.length ? colors.text : colors.muted, flex: 1 }}>
+                {items.length ? items.join(', ') : 'Not set'}
+              </Text>
+            </View>
+          );
+        })}
+      </Card>
+
       <Muted>Tap a day to set lunch/dinner. Breakfast turns on automatically.</Muted>
 
       {isLoading ? (
