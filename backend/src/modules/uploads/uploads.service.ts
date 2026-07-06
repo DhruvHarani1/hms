@@ -72,11 +72,12 @@ export class UploadsService {
     };
   }
 
-  /** Signed delivery URL for a private asset. */
+  /** Signed delivery URL for a private asset.
+   *  Assets uploaded with access_mode=authenticated are delivered via the
+   *  standard `upload` type but REQUIRE a signature — so sign_url:true only. */
   signedViewUrl(publicId: string): string {
     this.ensure();
     return cloudinary.url(publicId, {
-      type: 'authenticated',
       resource_type: 'image',
       secure: true,
       sign_url: true,
