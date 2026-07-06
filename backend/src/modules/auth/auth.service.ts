@@ -29,6 +29,11 @@ export class AuthService {
     return createHash('sha256').update(value).digest('hex');
   }
 
+  private mailError(e: any) {
+    // eslint-disable-next-line no-console
+    console.error('[mail] reset email failed:', e?.message ?? e);
+  }
+
   private async signTokens(payload: JwtPayload) {
     const accessToken = await this.jwt.signAsync(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
@@ -259,7 +264,10 @@ export class AuthService {
       data: { userId: user.id, tokenHash: this.sha256(code), expiresAt },
     });
 
-    await this.mail.sendResetCode(user.email, code);
+    // Fire-and-forget: don't block the HTTP response on the SMTP handshake.
+    this.mail
+      .sendResetCode(user.email, code)
+      .catch((e) => this.mailError(e));
 
     // In dev (no SMTP), return the code so it's testable.
     const devCode =
