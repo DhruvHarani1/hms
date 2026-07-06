@@ -28,23 +28,22 @@ class SignUploadDto {
 export class UploadsController {
   constructor(private readonly service: UploadsService) {}
 
-  /** Student requests a presigned PUT to upload their own document. */
+  /** Student asks for a signed Cloudinary upload payload for their own doc. */
   @Post('sign')
   @HttpCode(200)
-  async sign(@CurrentUser() user: AuthUser, @Body() dto: SignUploadDto) {
-    const key = this.service.buildKey(
+  sign(@CurrentUser() user: AuthUser, @Body() dto: SignUploadDto) {
+    const publicId = this.service.buildPublicId(
       user.hostelId,
       user.userId,
       dto.kind,
-      dto.contentType,
     );
-    const uploadUrl = await this.service.presignPut(key, dto.contentType);
-    return { uploadUrl, key };
+    // `key` = the public_id the app should save to its profile after upload.
+    return { ...this.service.signUpload(publicId), key: publicId };
   }
 
-  /** Presigned GET to view/download a document. Owner or same-hostel warden. */
+  /** Signed view/download URL for a document. Owner or same-hostel warden. */
   @Get('url')
-  async url(@CurrentUser() user: AuthUser, @Query('key') key: string) {
+  url(@CurrentUser() user: AuthUser, @Query('key') key: string) {
     if (!key) throw new BadRequestException('key required');
     const isWarden = user.role === 'warden' || user.role === 'staff';
     const ownsIt = key.startsWith(`${user.hostelId}/${user.userId}/`);
@@ -52,7 +51,6 @@ export class UploadsController {
     if (!(ownsIt || (isWarden && inHostel))) {
       throw new ForbiddenException();
     }
-    const url = await this.service.presignGet(key);
-    return { url };
+    return { url: this.service.signedViewUrl(key) };
   }
 }

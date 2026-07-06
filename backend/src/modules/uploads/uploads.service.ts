@@ -1,77 +1,85 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { v2 as cloudinary } from 'cloudinary';
 import { randomUUID } from 'crypto';
 
 /**
- * Cloudflare R2 (S3-compatible) storage. Private bucket — access only via
- * short-lived presigned URLs. Env:
- *   R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET
+ * Cloudinary storage (no card required, 25GB free). Private "authenticated"
+ * assets — only reachable via signed URLs. Env:
+ *   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
+ *
+ * Flow: backend returns a signed upload payload → the app uploads the file
+ * DIRECTLY to Cloudinary (no file passes through our server). We store only the
+ * returned public_id in the DB.
  */
 @Injectable()
 export class UploadsService {
-  private client: S3Client | null = null;
-  private bucket = process.env.R2_BUCKET ?? '';
+  private configured = false;
 
-  private getClient(): S3Client {
-    if (this.client) return this.client;
-    const accountId = process.env.R2_ACCOUNT_ID;
-    const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-    if (!accountId || !accessKeyId || !secretAccessKey || !this.bucket) {
+  private ensure() {
+    const cloud = process.env.CLOUDINARY_CLOUD_NAME;
+    const key = process.env.CLOUDINARY_API_KEY;
+    const secret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloud || !key || !secret) {
       throw new InternalServerErrorException(
-        'File storage is not configured (R2 env vars missing).',
+        'File storage is not configured (Cloudinary env vars missing).',
       );
     }
-    this.client = new S3Client({
-      region: 'auto',
-      endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-      credentials: { accessKeyId, secretAccessKey },
-    });
-    return this.client;
+    if (!this.configured) {
+      cloudinary.config({
+        cloud_name: cloud,
+        api_key: key,
+        api_secret: secret,
+        secure: true,
+      });
+      this.configured = true;
+    }
   }
 
   isConfigured(): boolean {
     return !!(
-      process.env.R2_ACCOUNT_ID &&
-      process.env.R2_ACCESS_KEY_ID &&
-      process.env.R2_SECRET_ACCESS_KEY &&
-      process.env.R2_BUCKET
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
     );
   }
 
-  private extFor(contentType: string): string {
-    if (contentType.includes('png')) return 'png';
-    if (contentType.includes('webp')) return 'webp';
-    if (contentType.includes('pdf')) return 'pdf';
-    return 'jpg';
+  /** public_id embeds hostel/student so access can be checked by prefix. */
+  buildPublicId(hostelId: string, studentId: string, kind: string): string {
+    return `${hostelId}/${studentId}/${kind}-${randomUUID()}`;
   }
 
-  /** Build an object key scoped to hostel/student so access can be checked. */
-  buildKey(
-    hostelId: string,
-    studentId: string,
-    kind: string,
-    contentType: string,
-  ): string {
-    return `${hostelId}/${studentId}/${kind}-${randomUUID()}.${this.extFor(contentType)}`;
+  /** Signed params the app posts to Cloudinary's upload endpoint. */
+  signUpload(publicId: string) {
+    this.ensure();
+    const timestamp = Math.round(Date.now() / 1000);
+    const paramsToSign: Record<string, any> = {
+      public_id: publicId,
+      timestamp,
+      access_mode: 'authenticated',
+    };
+    const signature = cloudinary.utils.api_sign_request(
+      paramsToSign,
+      process.env.CLOUDINARY_API_SECRET as string,
+    );
+    return {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      timestamp,
+      publicId,
+      accessMode: 'authenticated',
+      signature,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
+    };
   }
 
-  async presignPut(key: string, contentType: string): Promise<string> {
-    const cmd = new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      ContentType: contentType,
+  /** Signed delivery URL for a private asset. */
+  signedViewUrl(publicId: string): string {
+    this.ensure();
+    return cloudinary.url(publicId, {
+      type: 'authenticated',
+      resource_type: 'image',
+      secure: true,
+      sign_url: true,
     });
-    return getSignedUrl(this.getClient(), cmd, { expiresIn: 300 });
-  }
-
-  async presignGet(key: string): Promise<string> {
-    const cmd = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-    return getSignedUrl(this.getClient(), cmd, { expiresIn: 300 });
   }
 }
