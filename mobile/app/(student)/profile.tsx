@@ -5,28 +5,35 @@ import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
 import { pickAndUpload, getFileUrl, DocKind } from '@/src/lib/upload';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
+import { DateField, SelectField } from '@/src/components/form';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
 
+const GENDERS = ['Male', 'Female', 'Other'];
+const BLOOD = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+
+// Plain text fields. Special fields (dates, gender, blood) rendered separately.
 const FIELDS: { key: string; label: string; profile?: boolean }[] = [
   { key: 'fullName', label: 'Name' },
   { key: 'surname', label: 'Surname', profile: true },
   { key: 'fatherName', label: "Father's name", profile: true },
   { key: 'phone', label: 'Mobile number' },
-  { key: 'dob', label: 'Date of birth (YYYY-MM-DD)', profile: true },
-  { key: 'gender', label: 'Gender', profile: true },
-  { key: 'bloodGroup', label: 'Blood group', profile: true },
   { key: 'address', label: 'Address', profile: true },
   { key: 'guardianPhone', label: 'Guardian phone', profile: true },
   { key: 'emergencyContact', label: 'Emergency contact', profile: true },
   { key: 'course', label: 'Course', profile: true },
   { key: 'year', label: 'Year', profile: true },
-  { key: 'department', label: 'Department', profile: true },
   { key: 'instituteName', label: 'Institute name', profile: true },
   { key: 'instituteAddress', label: 'Institute address', profile: true },
-  { key: 'rollNo', label: 'Roll no', profile: true },
-  { key: 'roomNumber', label: 'Room', profile: true },
-  { key: 'admissionDate', label: 'Date of joining (YYYY-MM-DD)', profile: true },
+];
+
+// Keys that still round-trip through the form (incl. specials).
+const ALL_KEYS = [
+  ...FIELDS.map((f) => f.key),
+  'dob',
+  'gender',
+  'bloodGroup',
+  'admissionDate',
 ];
 
 const DOCS: { kind: DocKind; label: string; keyField: string }[] = [
@@ -48,14 +55,16 @@ export default function StudentProfile() {
     queryFn: async () => (await api.get('/users/me')).data,
   });
 
+  const USER_KEYS = ['fullName', 'phone'];
+
   useEffect(() => {
     if (!data) return;
     const p = data.studentProfile ?? {};
     const next: Record<string, string> = {};
-    for (const f of FIELDS) {
-      let v = f.profile ? p[f.key] : data[f.key];
-      if ((f.key === 'dob' || f.key === 'admissionDate') && v) v = String(v).slice(0, 10);
-      next[f.key] = v != null ? String(v) : '';
+    for (const key of ALL_KEYS) {
+      let v = USER_KEYS.includes(key) ? data[key] : p[key];
+      if ((key === 'dob' || key === 'admissionDate') && v) v = String(v).slice(0, 10);
+      next[key] = v != null ? String(v) : '';
     }
     setForm(next);
     setKeys({
@@ -73,9 +82,9 @@ export default function StudentProfile() {
     setSaving(true);
     try {
       const payload: any = {};
-      for (const f of FIELDS) {
-        const v = form[f.key]?.trim() ?? '';
-        payload[f.key] = f.key === 'year' ? (v ? Number(v) : undefined) : v || undefined;
+      for (const key of ALL_KEYS) {
+        const v = (form[key] ?? '').trim();
+        payload[key] = key === 'year' ? (v ? Number(v) : undefined) : v || undefined;
       }
       await api.patch('/users/me', payload);
       qc.invalidateQueries({ queryKey: ['me'] });
@@ -134,6 +143,28 @@ export default function StudentProfile() {
             keyboardType={f.key === 'year' ? 'numeric' : 'default'}
           />
         ))}
+        <DateField
+          label="Date of birth"
+          value={form.dob ?? ''}
+          onChange={(v) => set('dob', v)}
+        />
+        <DateField
+          label="Date of joining"
+          value={form.admissionDate ?? ''}
+          onChange={(v) => set('admissionDate', v)}
+        />
+        <SelectField
+          label="Gender"
+          value={form.gender ?? ''}
+          options={GENDERS}
+          onChange={(v) => set('gender', v)}
+        />
+        <SelectField
+          label="Blood group"
+          value={form.bloodGroup ?? ''}
+          options={BLOOD}
+          onChange={(v) => set('bloodGroup', v)}
+        />
         <Button title="Save profile" onPress={save} loading={saving} />
       </Card>
 

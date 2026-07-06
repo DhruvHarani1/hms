@@ -3,6 +3,7 @@ import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
+import { DateField } from '@/src/components/form';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
@@ -150,18 +151,8 @@ export default function StudentAttendance() {
           <View style={{ padding: 16 }}>
             <Card style={{ gap: 12 }}>
               <H1>Apply for leave</H1>
-              <Field
-                label="Start date (YYYY-MM-DD)"
-                value={start}
-                onChangeText={setStart}
-                autoCapitalize="none"
-              />
-              <Field
-                label="End date (YYYY-MM-DD)"
-                value={end}
-                onChangeText={setEnd}
-                autoCapitalize="none"
-              />
+              <DateField label="Start date" value={start} onChange={setStart} />
+              <DateField label="End date" value={end} onChange={setEnd} />
               <Field
                 label="Reason"
                 value={reason}

@@ -30,7 +30,7 @@ export class StudentPdfService {
     doc
       .fontSize(18)
       .fillColor('#4f46e5')
-      .text(s.hostel?.name ?? 'AIFDMS Hostel', { align: 'center' });
+      .text('AIFDMS Hostel', { align: 'center' });
     doc
       .fontSize(12)
       .fillColor('#334155')
@@ -73,13 +73,8 @@ export class StudentPdfService {
     section('Academic');
     row('Course:', p?.course);
     row('Year:', p?.year);
-    row('Department:', p?.department);
     row('Institute name:', p?.instituteName);
     row('Institute address:', p?.instituteAddress);
-    row('Roll no:', p?.rollNo);
-
-    section('Hostel');
-    row('Room:', p?.roomNumber);
     row('Date of joining:', fmtDate(p?.admissionDate));
 
     section('Documents');

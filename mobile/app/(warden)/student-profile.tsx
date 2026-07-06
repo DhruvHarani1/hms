@@ -105,11 +105,8 @@ export default function WardenStudentProfile() {
         </Text>
         <Row label="Course" value={p.course} />
         <Row label="Year" value={p.year} />
-        <Row label="Department" value={p.department} />
         <Row label="Institute" value={p.instituteName} />
         <Row label="Institute address" value={p.instituteAddress} />
-        <Row label="Roll no" value={p.rollNo} />
-        <Row label="Room" value={p.roomNumber} />
         <Row label="Joined" value={p.admissionDate?.slice(0, 10)} />
       </Card>
 
