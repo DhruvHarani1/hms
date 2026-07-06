@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { randomBytes, createHash } from 'crypto';
+import { createHash, randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import {
   ChangePasswordDto,
   LoginDto,
@@ -21,6 +22,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private mail: MailService,
   ) {}
 
   private sha256(value: string): string {
@@ -244,31 +246,46 @@ export class AuthService {
     // Always respond success to avoid leaking which emails exist.
     if (!user) return { success: true };
 
-    const rawToken = randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
+    // 6-digit code.
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
+
+    // Invalidate prior unused codes for this user.
+    await this.prisma.passwordReset.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
     await this.prisma.passwordReset.create({
-      data: { userId: user.id, tokenHash: this.sha256(rawToken), expiresAt },
+      data: { userId: user.id, tokenHash: this.sha256(code), expiresAt },
     });
 
-    // MVP: email delivery is deferred — return the token in dev so it's testable.
-    const devToken =
-      process.env.NODE_ENV === 'production' ? undefined : rawToken;
-    return { success: true, devToken };
+    await this.mail.sendResetCode(user.email, code);
+
+    // In dev (no SMTP), return the code so it's testable.
+    const devCode =
+      process.env.NODE_ENV === 'production' || this.mail.isConfigured()
+        ? undefined
+        : code;
+    return { success: true, devCode };
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const tokenHash = this.sha256(dto.token);
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+    if (!user) throw new BadRequestException('Invalid or expired code');
+
     const reset = await this.prisma.passwordReset.findFirst({
-      where: { tokenHash, usedAt: null },
+      where: { userId: user.id, tokenHash: this.sha256(dto.code), usedAt: null },
     });
     if (!reset || reset.expiresAt < new Date()) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException('Invalid or expired code');
     }
 
     const passwordHash = await argon2.hash(dto.newPassword);
     await this.prisma.$transaction([
       this.prisma.user.update({
-        where: { id: reset.userId },
+        where: { id: user.id },
         data: { passwordHash },
       }),
       this.prisma.passwordReset.update({
@@ -277,7 +294,7 @@ export class AuthService {
       }),
       // Revoke all existing sessions on password change.
       this.prisma.refreshToken.updateMany({
-        where: { userId: reset.userId, revokedAt: null },
+        where: { userId: user.id, revokedAt: null },
         data: { revokedAt: new Date() },
       }),
     ]);

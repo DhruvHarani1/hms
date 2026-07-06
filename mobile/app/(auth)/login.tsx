@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, View, Text } from 'react-native';
+import { Alert, Image, Pressable, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/stores/auth';
@@ -62,6 +62,11 @@ export default function Login() {
         />
 
         <Button title="Log in" onPress={onSubmit} loading={loading} />
+        <Pressable onPress={() => router.push('/(auth)/forgot')} style={{ alignSelf: 'center', paddingVertical: 4 }}>
+          <Text style={{ color: colors.primary, fontWeight: '700' }}>
+            Forgot password?
+          </Text>
+        </Pressable>
         <Button
           title="New here? Sign up"
           variant="outline"
