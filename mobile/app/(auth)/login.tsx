@@ -6,6 +6,7 @@ import { useAuth } from '@/src/stores/auth';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 import { registerForPush } from '@/src/notifications/register';
+import { registerWebPush } from '@/src/notifications/webpush';
 
 export default function Login() {
   const router = useRouter();
@@ -20,8 +21,9 @@ export default function Login() {
     }
     try {
       await login(email.trim().toLowerCase(), password);
-      // Register this device for meal-ready pushes (non-blocking).
+      // Register for pushes (non-blocking). Native = FCM/APNs, web = web push.
       registerForPush();
+      registerWebPush();
     } catch (e: any) {
       Alert.alert(
         'Login failed',

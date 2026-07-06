@@ -6,6 +6,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PushService } from './push.service';
+import { WebPushService } from '../web-push/web-push.service';
 
 type PushMeal = 'breakfast' | 'lunch' | 'dinner';
 
@@ -26,6 +27,7 @@ export class NotificationsService {
   constructor(
     private prisma: PrismaService,
     private push: PushService,
+    private webPush: WebPushService,
   ) {}
 
   /**
@@ -77,6 +79,12 @@ export class NotificationsService {
       params.title,
       params.body,
       { notificationId: notification.id, type: params.type, ...params.data },
+    );
+
+    // Web push (browser / installed PWA incl. iOS).
+    await this.webPush.sendToUsers(
+      students.map((s) => s.id),
+      { title: params.title, body: params.body, data: { type: params.type } },
     );
 
     return { notificationId: notification.id, notified: students.length };
@@ -163,6 +171,10 @@ export class NotificationsService {
       title,
       body,
       { notificationId: notification.id, type: 'individual', ...data },
+    );
+    await this.webPush.sendToUsers(
+      wardens.map((w) => w.id),
+      { title, body, data: { type: 'individual' } },
     );
     return { notified: wardens.length };
   }

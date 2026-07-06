@@ -26,19 +26,20 @@
     "@nestjs/platform-express": "^10.4.4",
     "@prisma/client": "^5.20.0",
     "argon2": "^0.41.1",
-    "cloudinary": "^2.5.1",
-    "pdfkit": "^0.15.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "cloudinary": "^2.5.1",
     "exceljs": "^4.4.0",
     "expo-server-sdk": "^3.10.0",
     "helmet": "^8.0.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.15.0",
     "prisma": "^5.20.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.5",
@@ -46,6 +47,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.7.4",
     "@types/passport-jwt": "^4.0.1",
+    "@types/web-push": "^3.6.4",
     "typescript": "^5.6.2"
   }
 }

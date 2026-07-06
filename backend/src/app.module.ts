@@ -6,6 +6,7 @@ import { UsersModule } from './modules/users/users.module';
 import { StudentsModule } from './modules/students/students.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { WebPushModule } from './modules/web-push/web-push.module';
 import { MealsModule } from './modules/meals/meals.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { LeavesModule } from './modules/leaves/leaves.module';
@@ -23,6 +24,7 @@ import { HealthController } from './health.controller';
     StudentsModule,
     UploadsModule,
     NotificationsModule,
+    WebPushModule,
     MealsModule,
     AttendanceModule,
     LeavesModule,

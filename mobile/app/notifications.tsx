@@ -1,6 +1,7 @@
 import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
+import { useState } from 'react';
 import { api } from '@/src/lib/api';
 import { colors, radius } from '@/src/lib/theme';
 import {
@@ -8,6 +9,11 @@ import {
   ErrorState,
   SkeletonList,
 } from '@/src/components/primitives';
+import {
+  registerWebPush,
+  webPushSupported,
+  webPushGranted,
+} from '@/src/notifications/webpush';
 
 const TYPE_EMOJI: Record<string, string> = {
   meal: '🍽️',
@@ -57,6 +63,17 @@ export default function NotificationsScreen() {
 
   const hasUnread = (data ?? []).some((r: any) => !r.readAt);
 
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushOn, setPushOn] = useState(() => webPushGranted());
+  const showEnable = webPushSupported() && !pushOn;
+
+  async function enablePush() {
+    setPushBusy(true);
+    const ok = await registerWebPush();
+    setPushOn(ok);
+    setPushBusy(false);
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <Stack.Screen
@@ -75,6 +92,35 @@ export default function NotificationsScreen() {
             ) : null,
         }}
       />
+
+      {showEnable ? (
+        <Pressable
+          onPress={enablePush}
+          style={{
+            margin: 16,
+            marginBottom: 0,
+            padding: 14,
+            borderRadius: radius.lg,
+            backgroundColor: colors.primarySoft,
+            borderWidth: 1,
+            borderColor: colors.primary,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>🔔</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: '800', color: colors.text }}>
+              {pushBusy ? 'Enabling…' : 'Turn on notifications'}
+            </Text>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>
+              Get alerts even when the app is closed. On iPhone: add this app to
+              your Home Screen first.
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       {isLoading ? (
         <SkeletonList count={6} />

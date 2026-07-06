@@ -149,6 +149,7 @@ model User {
   refreshTokens          RefreshToken[]
   passwordResets         PasswordReset[]
   deviceTokens           DeviceToken[]
+  webPushSubscriptions   WebPushSubscription[]
   notificationRecipients NotificationRecipient[]
   mealAttendances        MealAttendance[]
   attendances            Attendance[]
@@ -291,6 +292,20 @@ model DeviceToken {
 
   @@index([userId])
   @@map("device_tokens")
+}
+
+model WebPushSubscription {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("web_push_subscriptions")
 }
 
 // ─────────────────────────── Meals ───────────────────────────
