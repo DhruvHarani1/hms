@@ -166,9 +166,13 @@ model StudentProfile {
   userId           String    @unique @map("user_id")
   hostelId         String    @map("hostel_id")
   rollNo           String?   @map("roll_no")
+  fatherName       String?   @map("father_name")
+  surname          String?
   course           String?
   year             Int?
   department       String?
+  instituteName    String?   @map("institute_name")
+  instituteAddress String?   @map("institute_address")
   guardianName     String?   @map("guardian_name")
   guardianPhone    String?   @map("guardian_phone")
   bloodGroup       String?   @map("blood_group")
@@ -177,6 +181,9 @@ model StudentProfile {
   dob              DateTime?
   gender           String?
   photoUrl         String?   @map("photo_url")
+  photoKey         String?   @map("photo_key")          // R2 object key: profile photo
+  aadhaarKey       String?   @map("aadhaar_key")        // R2 object key: Aadhaar card
+  courseProofKey   String?   @map("course_proof_key")   // R2 object key: fee receipt / course proof
   admissionDate    DateTime? @map("admission_date")
   hostelIdCardNo   String?   @map("hostel_id_card_no")
   roomNumber       String?   @map("room_number") // simple text for MVP; real room mgmt is deferred

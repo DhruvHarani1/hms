@@ -26,9 +26,9 @@ export class UsersController {
     @CurrentUser() user: AuthUser,
     @Body() dto: UpdateProfileDto,
   ) {
-    const { fullName, phone, avatarUrl, ...profileFields } = dto;
+    const { fullName, phone, avatarUrl, dob, admissionDate, ...rest } = dto;
 
-    const updated = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: user.userId },
       data: {
         ...(fullName !== undefined && { fullName }),
@@ -37,15 +37,25 @@ export class UsersController {
       },
     });
 
-    // Update student profile fields if this is a student and any were sent.
-    if (user.role === 'student' && Object.keys(profileFields).length > 0) {
-      await this.prisma.studentProfile.updateMany({
-        where: { userId: user.userId },
-        data: profileFields,
-      });
+    if (user.role === 'student') {
+      const profileData: any = { ...rest };
+      if (dob !== undefined) profileData.dob = dob ? new Date(dob) : null;
+      if (admissionDate !== undefined)
+        profileData.admissionDate = admissionDate ? new Date(admissionDate) : null;
+      if (Object.keys(profileData).length > 0) {
+        await this.prisma.studentProfile.updateMany({
+          where: { userId: user.userId },
+          data: profileData,
+        });
+      }
     }
 
-    const { passwordHash, ...rest } = updated;
-    return rest;
+    const found = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      include: { studentProfile: true },
+    });
+    if (!found) return null;
+    const { passwordHash, ...safe } = found;
+    return safe;
   }
 }

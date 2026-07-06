@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
 import { Card, Field, Muted } from '@/src/components/ui';
 import {
@@ -11,6 +12,7 @@ import {
 import { colors } from '@/src/lib/theme';
 
 export default function WardenStudents() {
+  const router = useRouter();
   const [q, setQ] = useState('');
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['students', q],
@@ -45,17 +47,35 @@ export default function WardenStudents() {
           />
         }
         renderItem={({ item }: { item: any }) => (
-          <Card>
-            <Text style={{ fontWeight: '700', color: colors.text }}>
-              {item.fullName}
-            </Text>
-            <Muted>
-              {item.email}
-              {item.studentProfile?.roomNumber
-                ? ` · Room ${item.studentProfile.roomNumber}`
-                : ''}
-            </Muted>
-          </Card>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/(warden)/student-profile',
+                params: { id: item.id, name: item.fullName },
+              })
+            }
+          >
+            <Card
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View>
+                <Text style={{ fontWeight: '700', color: colors.text }}>
+                  {item.fullName}
+                </Text>
+                <Muted>
+                  {item.email}
+                  {item.studentProfile?.roomNumber
+                    ? ` · Room ${item.studentProfile.roomNumber}`
+                    : ''}
+                </Muted>
+              </View>
+              <Text style={{ fontSize: 20, color: colors.muted }}>›</Text>
+            </Card>
+          </Pressable>
         )}
       />
       )}

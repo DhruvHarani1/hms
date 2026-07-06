@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectMigrations">
+    <option name="MigrateToGradleLocalJavaHome">
+      <set>
+        <option value="$PROJECT_DIR$/mobile/node_modules/expo-dev-launcher/expo-dev-launcher-gradle-plugin" />
+        <option value="$PROJECT_DIR$/mobile/node_modules/expo-updates/expo-updates-gradle-plugin" />
+      </set>
+    </option>
+  </component>
+</project>

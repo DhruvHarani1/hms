@@ -10,8 +10,7 @@ export default function Register() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [rollNo, setRollNo] = useState('');
-  const [roomNumber, setRoomNumber] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -29,9 +28,8 @@ export default function Register() {
       const res = await api.post('/auth/register', {
         fullName,
         email: email.trim().toLowerCase(),
+        phone: phone || undefined,
         password,
-        rollNo: rollNo || undefined,
-        roomNumber: roomNumber || undefined,
       });
       const reapplied = res.data?.reapplied;
       Alert.alert(
@@ -72,11 +70,11 @@ export default function Register() {
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <Field label="Roll no (optional)" value={rollNo} onChangeText={setRollNo} />
         <Field
-          label="Room (optional)"
-          value={roomNumber}
-          onChangeText={setRoomNumber}
+          label="Mobile number"
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
         />
         <Field
           label="Password"
@@ -85,6 +83,7 @@ export default function Register() {
           secureTextEntry
           placeholder="min 8 characters"
         />
+        <Muted>You can add the rest of your details in Profile after login.</Muted>
 
         <Button title="Send join request" onPress={onSubmit} loading={busy} />
         <Button

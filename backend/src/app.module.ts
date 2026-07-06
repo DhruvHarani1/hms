@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { StudentsModule } from './modules/students/students.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { MealsModule } from './modules/meals/meals.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
@@ -20,6 +21,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     UsersModule,
     StudentsModule,
+    UploadsModule,
     NotificationsModule,
     MealsModule,
     AttendanceModule,
