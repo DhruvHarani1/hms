@@ -72,6 +72,22 @@ export class UploadsService {
     };
   }
 
+  /** Permanently delete stored images by public_id (best-effort). */
+  async deleteImages(keys: (string | null | undefined)[]): Promise<void> {
+    const ids = keys.filter((k): k is string => !!k);
+    if (ids.length === 0 || !this.isConfigured()) return;
+    this.ensure();
+    await Promise.allSettled(
+      ids.map((id) =>
+        cloudinary.uploader.destroy(id, {
+          resource_type: 'image',
+          type: 'authenticated',
+          invalidate: true,
+        }),
+      ),
+    );
+  }
+
   /** Signed delivery URL for a private asset.
    *  Assets uploaded with access_mode=authenticated are delivered via the
    *  standard `upload` type but REQUIRE a signature — so sign_url:true only. */

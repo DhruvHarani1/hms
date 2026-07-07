@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -23,6 +24,7 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { StudentPdfService } from './student-pdf.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 class RejectDto {
   @IsOptional()
@@ -36,7 +38,29 @@ export class StudentsController {
     private prisma: PrismaService,
     private pdf: StudentPdfService,
     private jwt: JwtService,
+    private uploads: UploadsService,
   ) {}
+
+  // ── Warden: permanently delete a student (DB + Cloudinary files) ──
+  @Roles('warden', 'staff')
+  @Delete(':id')
+  async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    const student = await this.prisma.user.findFirst({
+      where: { id, hostelId: user.hostelId, role: { in: ['student', 'cook'] } },
+      include: { studentProfile: true },
+    });
+    if (!student) throw new BadRequestException('Student not found');
+
+    // Delete uploaded documents from Cloudinary first (best-effort).
+    const p = student.studentProfile;
+    await this.uploads.deleteImages([p?.photoKey, p?.aadhaarKey, p?.courseProofKey]);
+
+    // Delete the user — cascades remove profile, meals, attendance, leaves,
+    // complaints, notifications, devices, subscriptions, tokens.
+    await this.prisma.user.delete({ where: { id } });
+
+    return { success: true };
+  }
 
   // ── Profile PDF (warden) ──
   @Roles('warden', 'staff')

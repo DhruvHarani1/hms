@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Alert, Linking, ScrollView, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Alert, Linking, Modal, ScrollView, Text, View } from 'react-native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
 import { API_URL } from '@/src/lib/config';
 import { getFileUrl } from '@/src/lib/upload';
 import { Button, Card, Muted } from '@/src/components/ui';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
-import { colors } from '@/src/lib/theme';
+import { colors, radius } from '@/src/lib/theme';
 
 function Row({ label, value }: { label: string; value?: any }) {
   return (
@@ -22,7 +22,27 @@ function Row({ label, value }: { label: string; value?: any }) {
 
 export default function WardenStudentProfile() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+  const router = useRouter();
+  const qc = useQueryClient();
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  async function removeStudent() {
+    setRemoving(true);
+    try {
+      await api.delete(`/students/${id}`);
+      qc.invalidateQueries({ queryKey: ['students'] });
+      qc.invalidateQueries({ queryKey: ['meal-students'] });
+      qc.invalidateQueries({ queryKey: ['att-students'] });
+      setConfirm(false);
+      router.back();
+    } catch (e: any) {
+      Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.');
+    } finally {
+      setRemoving(false);
+    }
+  }
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['warden-student', id],
@@ -126,6 +146,31 @@ export default function WardenStudentProfile() {
           ) : null}
         </Card>
       ))}
+
+      <View style={{ height: 8 }} />
+      <Button title="🗑  Remove student" variant="danger" onPress={() => setConfirm(true)} />
+
+      <Modal visible={confirm} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }}>
+          <Card style={{ gap: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
+              Remove {data?.fullName ?? name}?
+            </Text>
+            <Muted>
+              This permanently deletes the student and all their data — profile,
+              documents (Aadhaar/photo/proof), meals, attendance, leaves and
+              complaints. This cannot be undone.
+            </Muted>
+            <Button
+              title="Yes, remove permanently"
+              variant="danger"
+              onPress={removeStudent}
+              loading={removing}
+            />
+            <Button title="Cancel" variant="outline" onPress={() => setConfirm(false)} />
+          </Card>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
