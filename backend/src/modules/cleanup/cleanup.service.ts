@@ -51,11 +51,15 @@ export class CleanupService {
       const sessions = await this.prisma.mealSession.deleteMany({
         where: { createdAt: { lt: this.daysAgo(2) } },
       });
+      // Usage analytics older than 90 days.
+      const usage = await this.prisma.usageDaily.deleteMany({
+        where: { date: { lt: this.daysAgo(90) } },
+      });
 
       this.logger.log(
         `cleanup: mealNotif=${meals.count} oldNotif=${oldNotifs.count} ` +
           `complaints=${complaints.count} notices=${notices.count} ` +
-          `resets=${resets.count} tokens=${tokens.count} sessions=${sessions.count}`,
+          `resets=${resets.count} tokens=${tokens.count} sessions=${sessions.count} usage=${usage.count}`,
       );
     } catch (e: any) {
       this.logger.error(`cleanup failed: ${e?.message ?? e}`);

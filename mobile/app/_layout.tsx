@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '@/src/stores/auth';
+import { useUsageTracker } from '@/src/hooks/useUsageTracker';
 import { colors } from '@/src/lib/theme';
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ function AuthGate() {
   const { user, initialized, bootstrap } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  useUsageTracker();
 
   useEffect(() => {
     bootstrap();

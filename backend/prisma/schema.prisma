@@ -152,6 +152,7 @@ model User {
   passwordResets         PasswordReset[]
   deviceTokens           DeviceToken[]
   webPushSubscriptions   WebPushSubscription[]
+  usageDaily             UsageDaily[]
   notificationRecipients NotificationRecipient[]
   mealAttendances        MealAttendance[]
   attendances            Attendance[]
@@ -294,6 +295,23 @@ model DeviceToken {
 
   @@index([userId])
   @@map("device_tokens")
+}
+
+// Per-user per-day active-time accumulator (seconds). Client pings while the
+// app is in the foreground; we increment. One row per user per day.
+model UsageDaily {
+  id        String   @id @default(uuid())
+  hostelId  String   @map("hostel_id")
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  seconds   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([hostelId, date])
+  @@map("usage_daily")
 }
 
 model WebPushSubscription {

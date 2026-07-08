@@ -16,6 +16,7 @@ import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { NoticesModule } from './modules/notices/notices.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CleanupModule } from './modules/cleanup/cleanup.module';
+import { UsageModule } from './modules/usage/usage.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -37,6 +38,7 @@ import { HealthController } from './health.controller';
     NoticesModule,
     DashboardModule,
     CleanupModule,
+    UsageModule,
   ],
   controllers: [HealthController],
 })
