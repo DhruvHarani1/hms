@@ -10,10 +10,14 @@ import {
   UpdateComplaintDto,
 } from './dto/complaints.dto';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class ComplaintsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mail: MailService,
+  ) {}
 
   async categories(hostelId: string) {
     return this.prisma.complaintCategory.findMany({ where: { hostelId } });
@@ -28,7 +32,7 @@ export class ComplaintsService {
       if (cat) priority = cat.defaultPriority;
     }
 
-    return this.prisma.complaint.create({
+    const complaint = await this.prisma.complaint.create({
       data: {
         hostelId: user.hostelId,
         studentId: user.userId,
@@ -47,6 +51,33 @@ export class ComplaintsService {
       },
       include: { attachments: true, category: true },
     });
+
+    // Fire-and-forget: email all wardens about the new complaint.
+    const studentUser = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { fullName: true },
+    });
+    this.prisma.user
+      .findMany({
+        where: { hostelId: user.hostelId, role: { in: ['warden', 'staff'] as any }, status: 'active', deletedAt: null },
+        select: { email: true },
+      })
+      .then((wardens) => {
+        for (const w of wardens) {
+          this.mail
+            .sendWardenNewComplaint(
+              w.email,
+              studentUser?.fullName ?? 'A student',
+              dto.title,
+              complaint.category?.name ?? 'Uncategorized',
+              String(priority),
+            )
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    return complaint;
   }
 
   async list(user: AuthUser, filters: { status?: string; priority?: string }) {
@@ -90,8 +121,8 @@ export class ComplaintsService {
   }
 
   async update(user: AuthUser, id: string, dto: UpdateComplaintDto) {
-    await this.getOne(user, id); // ensures it exists + in tenant
-    return this.prisma.complaint.update({
+    const existing = await this.getOne(user, id); // ensures it exists + in tenant
+    const updated = await this.prisma.complaint.update({
       where: { id },
       data: {
         ...(dto.status && { status: dto.status }),
@@ -100,6 +131,21 @@ export class ComplaintsService {
         ...(dto.status === 'resolved' && { resolvedAt: new Date() }),
       },
     });
+
+    // Fire-and-forget: email the student when complaint is resolved.
+    if (dto.status === 'resolved') {
+      const student = await this.prisma.user.findUnique({
+        where: { id: existing.studentId },
+        select: { email: true, fullName: true },
+      });
+      if (student) {
+        this.mail
+          .sendComplaintResolved(student.email, student.fullName, existing.title)
+          .catch(() => {});
+      }
+    }
+
+    return updated;
   }
 
   async reply(user: AuthUser, id: string, dto: ReplyComplaintDto) {

@@ -1,12 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class LeavesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private mail: MailService,
   ) {}
 
   private parseDate(input: string): Date {
@@ -83,6 +85,21 @@ export class LeavesService {
       { leaveId: leave.id, studentId },
       studentId,
     );
+
+    // Fire-and-forget: email all wardens about the leave.
+    this.prisma.user
+      .findMany({
+        where: { hostelId, role: { in: ['warden', 'staff'] as any }, status: 'active', deletedAt: null },
+        select: { email: true },
+      })
+      .then((wardens) => {
+        for (const w of wardens) {
+          this.mail
+            .sendWardenLeaveRequest(w.email, student?.fullName ?? 'A student', dto.startDate, dto.endDate, dto.reason)
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
 
     return leave;
   }

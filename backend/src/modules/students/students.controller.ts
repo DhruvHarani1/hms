@@ -25,6 +25,7 @@ import {
 import { CreateStudentDto } from './dto/create-student.dto';
 import { StudentPdfService } from './student-pdf.service';
 import { UploadsService } from '../uploads/uploads.service';
+import { MailService } from '../mail/mail.service';
 
 class RejectDto {
   @IsOptional()
@@ -39,9 +40,9 @@ export class StudentsController {
     private pdf: StudentPdfService,
     private jwt: JwtService,
     private uploads: UploadsService,
+    private mail: MailService,
   ) {}
 
-  // ── Warden: permanently delete a student (DB + Cloudinary files) ──
   @Roles('warden', 'staff')
   @Delete(':id')
   async remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
@@ -50,6 +51,9 @@ export class StudentsController {
       include: { studentProfile: true },
     });
     if (!student) throw new BadRequestException('Student not found');
+
+    // Send account-removed email BEFORE deleting (need their email).
+    this.mail.sendAccountRemoved(student.email, student.fullName).catch(() => {});
 
     // Delete uploaded documents from Cloudinary first (best-effort).
     const p = student.studentProfile;
@@ -128,6 +132,10 @@ export class StudentsController {
       where: { id },
       data: { status: 'active', rejectionReason: null },
     });
+
+    // Fire-and-forget: send approved email.
+    this.mail.sendAccountApproved(student.email, student.fullName).catch(() => {});
+
     return { success: true, status: 'active' };
   }
 
@@ -146,6 +154,10 @@ export class StudentsController {
       where: { id },
       data: { status: 'rejected', rejectionReason: dto.reason ?? null },
     });
+
+    // Fire-and-forget: send rejected email with reason.
+    this.mail.sendAccountRejected(student.email, student.fullName, dto.reason).catch(() => {});
+
     return { success: true, status: 'rejected' };
   }
 

@@ -5,10 +5,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Request } from 'express';
 import * as argon2 from 'argon2';
 import { createHash, randomInt } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { buildDeviceInfo } from '../../common/utils/device-info.util';
 import {
   ChangePasswordDto,
   LoginDto,
@@ -116,6 +118,10 @@ export class AuthService {
             roomNumber: dto.roomNumber,
           },
         });
+
+        // Email: welcome (re-apply) + notify wardens.
+        this.sendRegistrationEmails(email, dto.fullName, existing.role, existing.hostelId);
+
         return { status: 'pending', reapplied: true };
       }
       throw new BadRequestException('This email cannot be registered.');
@@ -156,10 +162,32 @@ export class AuthService {
       },
     });
 
+    // Email: welcome + notify wardens.
+    this.sendRegistrationEmails(email, dto.fullName, role, hostel.id);
+
     return { status: 'pending', reapplied: false, role };
   }
 
-  async login(dto: LoginDto) {
+  /** Fire-and-forget: send welcome email to user + new-request alert to wardens. */
+  private sendRegistrationEmails(email: string, fullName: string, role: string, hostelId: string) {
+    // Welcome email to the new user.
+    this.mail.sendWelcome(email, fullName, role).catch((e) => this.mailError(e));
+
+    // Notify all wardens about the new join request.
+    this.prisma.user
+      .findMany({
+        where: { hostelId, role: { in: ['warden', 'staff'] as any }, status: 'active', deletedAt: null },
+        select: { email: true },
+      })
+      .then((wardens) => {
+        for (const w of wardens) {
+          this.mail.sendWardenNewRequest(w.email, fullName, role, email).catch((e) => this.mailError(e));
+        }
+      })
+      .catch((e) => this.mailError(e));
+  }
+
+  async login(dto: LoginDto, req?: Request) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
     });
@@ -193,6 +221,13 @@ export class AuthService {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    // Fire-and-forget: login alert email with device info.
+    if (req) {
+      buildDeviceInfo(req)
+        .then((info) => this.mail.sendLoginAlert(user.email, user.fullName, info))
+        .catch((e) => this.mailError(e));
+    }
 
     const tokens = await this.signTokens(this.buildPayload(user));
     await this.persistRefreshToken(user.id, tokens.refreshToken);
@@ -306,6 +341,10 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+
+    // Fire-and-forget: password changed confirmation email.
+    this.mail.sendPasswordChanged(user.email, user.fullName).catch((e) => this.mailError(e));
+
     return { success: true };
   }
 
@@ -320,6 +359,10 @@ export class AuthService {
       where: { id: userId },
       data: { passwordHash },
     });
+
+    // Fire-and-forget: password changed confirmation email.
+    this.mail.sendPasswordChanged(user.email, user.fullName).catch((e) => this.mailError(e));
+
     return { success: true };
   }
 
