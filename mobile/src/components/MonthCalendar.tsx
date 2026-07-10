@@ -78,20 +78,25 @@ export function MonthCalendar({
       </View>
 
       {/* Weekday row */}
-      <View style={{ flexDirection: 'row' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {WEEKDAYS.map((w, i) => (
-          <Text
+          <View
             key={i}
             style={{
-              flex: 1,
-              textAlign: 'center',
-              color: colors.muted,
-              fontWeight: '700',
-              fontSize: 12,
+              width: `${100 / 7}%`,
+              alignItems: 'center',
             }}
           >
-            {w}
-          </Text>
+            <Text
+              style={{
+                color: colors.muted,
+                fontWeight: '700',
+                fontSize: 12,
+              }}
+            >
+              {w}
+            </Text>
+          </View>
         ))}
       </View>
 
