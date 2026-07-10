@@ -488,4 +488,41 @@ export class MailService {
     const html = this.baseHtml('🔔 New: Email notifications are here!', bodyHtml);
     await this.sendMail(to, `AIFDMS Hostel — Email notifications are now live!`, html, text);
   }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  BIRTHDAY GREETING
+  // ═══════════════════════════════════════════════════════════════════
+
+  async sendBirthdayGreeting(to: string, fullName: string) {
+    const bodyHtml =
+      `<div style="text-align:center;font-size:42px;margin:8px 0 4px;">🎂</div>` +
+      `<div style="text-align:center;font-size:15px;color:${this.BRAND};font-weight:700;margin-bottom:16px;">Happy Birthday!</div>` +
+      `Hi <strong>${fullName}</strong>,` +
+      `<br><br>` +
+      `Wishing you a very <strong>Happy Birthday!</strong> 🎉🥳` +
+      `<br><br>` +
+      `May this year bring you joy, success, and wonderful memories. ` +
+      `Your presence makes AIFDMS Hostel a better place for everyone.` +
+      `<br><br>` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;">
+        <tr><td style="background:${this.BRAND_LIGHT};border:1px solid ${this.BRAND_BORDER};border-radius:12px;padding:20px;text-align:center;">
+          <div style="font-size:14px;color:#475569;line-height:22px;">
+            🎊 <strong>The warden and the entire hostel family</strong> wish you a fantastic birthday filled with happiness and good health!
+          </div>
+        </td></tr>
+      </table>` +
+      `Enjoy your special day — you deserve it! 🎁🎈` +
+      `<div style="text-align:center;margin-top:20px;font-size:15px;color:${this.BRAND};font-weight:700;">॥ जय महेश ॥</div>`;
+
+    const text =
+      `🎂 Happy Birthday, ${fullName}!\n\n` +
+      `Wishing you a very Happy Birthday!\n\n` +
+      `May this year bring you joy, success, and wonderful memories.\n\n` +
+      `The warden and the entire hostel family wish you a fantastic birthday filled with happiness and good health!\n\n` +
+      `Enjoy your special day! 🎁\n\n` +
+      `— AIFDMS Hostel · ॥ जय महेश ॥`;
+
+    const html = this.baseHtml('🎂 Happy Birthday, ' + fullName + '!', bodyHtml);
+    await this.sendMail(to, `🎂 Happy Birthday, ${fullName}! — From AIFDMS Hostel Family`, html, text);
+  }
 }
