@@ -57,6 +57,12 @@ export function MonthCalendar({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // Chunk into rows of 7 for explicit row rendering (avoids flexWrap issues).
+  const rows: (number | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    rows.push(cells.slice(i, i + 7));
+  }
+
   return (
     <View style={{ gap: 10 }}>
       {/* Header */}
@@ -80,13 +86,7 @@ export function MonthCalendar({
       {/* Weekday row */}
       <View style={{ flexDirection: 'row' }}>
         {WEEKDAYS.map((w, i) => (
-          <View
-            key={i}
-            style={{
-              width: `${100 / 7}%`,
-              alignItems: 'center',
-            }}
-          >
+          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
             <Text
               style={{
                 color: colors.muted,
@@ -100,61 +100,63 @@ export function MonthCalendar({
         ))}
       </View>
 
-      {/* Day grid */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-        {cells.map((d, i) => {
-          if (d === null) {
-            return <View key={i} style={{ width: `${100 / 7}%`, height: 44 }} />;
-          }
-          const key = `${year}-${pad(month + 1)}-${pad(d)}`;
-          const on = marked.has(key);
-          const danger = dangerDates?.has(key) ?? false;
-          const isToday = key === today;
-          return (
-            <View
-              key={i}
-              style={{
-                width: `${100 / 7}%`,
-                height: 44,
-                padding: 3,
-              }}
-            >
-              <Pressable
-                disabled={!onDayPress}
-                onPress={() => onDayPress?.(key)}
+      {/* Day grid — one explicit row per week */}
+      {rows.map((row, ri) => (
+        <View key={ri} style={{ flexDirection: 'row' }}>
+          {row.map((d, ci) => {
+            if (d === null) {
+              return <View key={ci} style={{ flex: 1, height: 44 }} />;
+            }
+            const key = `${year}-${pad(month + 1)}-${pad(d)}`;
+            const on = marked.has(key);
+            const danger = dangerDates?.has(key) ?? false;
+            const isToday = key === today;
+            return (
+              <View
+                key={ci}
                 style={{
                   flex: 1,
-                  borderRadius: radius.md,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: danger
-                    ? colors.danger
-                    : on
-                      ? colors.primary
-                      : colors.card,
-                  borderWidth: isToday ? 2 : 1,
-                  borderColor: isToday
-                    ? colors.primary
-                    : danger
+                  height: 44,
+                  padding: 3,
+                }}
+              >
+                <Pressable
+                  disabled={!onDayPress}
+                  onPress={() => onDayPress?.(key)}
+                  style={{
+                    flex: 1,
+                    borderRadius: radius.md,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: danger
                       ? colors.danger
                       : on
                         ? colors.primary
-                        : colors.border,
-                }}
-              >
-                <Text
-                  style={{
-                    color: danger || on ? '#fff' : colors.text,
-                    fontWeight: isToday ? '800' : '600',
+                        : colors.card,
+                    borderWidth: isToday ? 2 : 1,
+                    borderColor: isToday
+                      ? colors.primary
+                      : danger
+                        ? colors.danger
+                        : on
+                          ? colors.primary
+                          : colors.border,
                   }}
                 >
-                  {d}
-                </Text>
-              </Pressable>
-            </View>
-          );
-        })}
-      </View>
+                  <Text
+                    style={{
+                      color: danger || on ? '#fff' : colors.text,
+                      fontWeight: isToday ? '800' : '600',
+                    }}
+                  >
+                    {d}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
