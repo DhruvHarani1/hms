@@ -441,4 +441,51 @@ export class MailService {
     const html = this.baseHtml('✅ Complaint resolved', bodyHtml);
     await this.sendMail(to, `Your complaint "${complaintTitle}" has been resolved`, html, text);
   }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  BATCH: GREETING FOR EXISTING USERS (one-time catch-up)
+  // ═══════════════════════════════════════════════════════════════════
+
+  async sendExistingUserGreeting(to: string, fullName: string, role: string) {
+    const roleLabel = role === 'cook' ? 'Cook' : role === 'warden' ? 'Warden' : 'Student';
+
+    const features = role === 'warden'
+      ? `<ul style="padding-left:20px;margin:12px 0;">
+           <li>📋 <strong>New join requests</strong> — emailed when someone signs up</li>
+           <li>🏖️ <strong>Leave applications</strong> — emailed when a student applies for leave</li>
+           <li>📝 <strong>New complaints</strong> — emailed when a complaint is filed</li>
+         </ul>`
+      : role === 'cook'
+      ? `<ul style="padding-left:20px;margin:12px 0;">
+           <li>🔐 <strong>Login alerts</strong> — get notified when someone signs into your account</li>
+           <li>🔑 <strong>Password change alerts</strong> — know immediately if your password is changed</li>
+         </ul>`
+      : `<ul style="padding-left:20px;margin:12px 0;">
+           <li>🔐 <strong>Login alerts</strong> — get notified with device & location info when someone signs into your account</li>
+           <li>🔑 <strong>Password change alerts</strong> — know immediately if your password is changed</li>
+           <li>✅ <strong>Complaint updates</strong> — get emailed when your complaint is resolved</li>
+         </ul>`;
+
+    const bodyHtml =
+      `Hi <strong>${fullName}</strong>! 👋` +
+      `<br><br>` +
+      `We've added <strong>email notifications</strong> to the AIFDMS Hostel App to keep you informed and your account secure.` +
+      `<br><br>` +
+      `<strong>What's new for you as a ${roleLabel}:</strong>` +
+      features +
+      `All security emails include a <strong>"contact the warden"</strong> prompt in case something looks suspicious.` +
+      `<br><br>` +
+      `No action needed — these emails will be sent automatically going forward. Just keep using the app as usual!` +
+      `<div style="text-align:center;margin-top:20px;font-size:15px;color:${this.BRAND};font-weight:700;">॥ जय महेश ॥</div>`;
+
+    const text =
+      `Hi ${fullName},\n\n` +
+      `We've added email notifications to the AIFDMS Hostel App!\n\n` +
+      `You'll now get emails for login alerts, password changes, and more.\n` +
+      `No action needed — just keep using the app.\n\n` +
+      `— AIFDMS Hostel · ॥ जय महेश ॥`;
+
+    const html = this.baseHtml('🔔 New: Email notifications are here!', bodyHtml);
+    await this.sendMail(to, `AIFDMS Hostel — Email notifications are now live!`, html, text);
+  }
 }
