@@ -77,7 +77,7 @@ export function useChatMessages(conversationId: string) {
   const [messages, setMessages] = useState<CachedMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
-  const lastIdRef = useRef<string | undefined>();
+  const lastIdRef = useRef<string | undefined>(undefined);
 
   // Load cached messages on mount.
   useEffect(() => {

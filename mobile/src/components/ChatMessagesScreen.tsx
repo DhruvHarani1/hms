@@ -83,14 +83,22 @@ export default function ChatMessagesScreen() {
       const download = await FileSystem.downloadAsync(viewerImage, localUri);
 
       if (download.status === 200) {
-        // Save to gallery.
-        await MediaLibrary.saveToLibraryAsync(download.uri);
-        Alert.alert('✅ Saved', 'Image saved to your gallery.');
+        // Create a media asset from the downloaded file
+        const asset = await MediaLibrary.createAssetAsync(download.uri);
+        
+        // Find or create the "AIFDMS" album in the gallery
+        const album = await MediaLibrary.getAlbumAsync('AIFDMS');
+        if (album) {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        } else {
+          await MediaLibrary.createAlbumAsync('AIFDMS', asset, false);
+        }
+        Alert.alert('✅ Saved', 'Image saved to your AIFDMS gallery folder.');
       } else {
         Alert.alert('Error', 'Failed to download image.');
       }
-    } catch {
-      Alert.alert('Error', 'Failed to save image.');
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to save image: ' + (err?.message ?? err));
     }
     setSaving(false);
   }, [viewerImage, saving]);

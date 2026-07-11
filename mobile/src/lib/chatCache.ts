@@ -177,8 +177,8 @@ export function getLastCachedMessageId(messages: CachedMessage[]): string | unde
 // ─── Image Caching (AIFDMS/media/) ─────────────
 
 /**
- * Download a chat image to AIFDMS/media/ and also save to the
- * "AIFDMS" album in the phone's gallery for easy browsing.
+ * Download a chat image to AIFDMS/media/ and silently copy to the "AIFDMS" gallery album
+ * if permissions are granted (without prompting).
  */
 export async function cacheImage(remoteUrl: string, messageId: string): Promise<string | null> {
   try {
@@ -193,21 +193,22 @@ export async function cacheImage(remoteUrl: string, messageId: string): Promise<
     const result = await FileSystem.downloadAsync(remoteUrl, localPath);
     if (result.status !== 200) return null;
 
-    // Also save to phone gallery under "AIFDMS" album (best-effort).
+    // Auto-save to phone gallery under "AIFDMS" album (only if permissions are already granted).
     try {
       const { status } = await MediaLibrary.getPermissionsAsync();
       if (status === 'granted') {
         const asset = await MediaLibrary.createAssetAsync(localPath);
-        // Get or create the "AIFDMS" album.
-        let album = await MediaLibrary.getAlbumAsync(GALLERY_ALBUM);
+        const album = await MediaLibrary.getAlbumAsync(GALLERY_ALBUM);
         if (album) {
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+          // copy must be true to avoid permission prompt on Android 11+
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, true);
         } else {
-          await MediaLibrary.createAlbumAsync(GALLERY_ALBUM, asset, false);
+          // copy must be true to avoid permission prompt on Android 11+
+          await MediaLibrary.createAlbumAsync(GALLERY_ALBUM, asset, true);
         }
       }
     } catch {
-      // Gallery save is best-effort — don't fail the cache.
+      // Best-effort auto-save.
     }
 
     return localPath;

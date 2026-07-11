@@ -10,6 +10,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as MediaLibrary from 'expo-media-library';
 import { colors, radius } from '@/src/lib/theme';
 import { useChatConversations } from '@/src/hooks/useChat';
 import { api } from '@/src/lib/api';
@@ -33,6 +34,11 @@ export default function ChatListScreen() {
   const [showNewDM, setShowNewDM] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Request media library permission once on screen mount.
+  useEffect(() => {
+    MediaLibrary.requestPermissionsAsync().catch(() => {});
+  }, []);
 
   const loadUsers = async () => {
     try {
