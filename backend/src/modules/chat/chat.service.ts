@@ -42,6 +42,8 @@ export class ChatService {
 
   /** List all conversations for a user (sorted by most recent message). */
   async listConversations(userId: string, hostelId: string) {
+    // Auto-create the hostel-wide group if it doesn't exist yet.
+    await this.ensureHostelGroup(hostelId, userId);
     const memberships = await this.prisma.conversationMember.findMany({
       where: { userId },
       include: {
