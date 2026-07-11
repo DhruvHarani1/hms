@@ -1,51 +1,68 @@
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 
 /**
- * Encrypted file-based chat storage.
+ * Encrypted file-based chat storage under the "AIFDMS" folder.
  *
- * Messages and conversations are stored as encrypted JSON files in the
- * app's document directory (persistent across app updates, not cleared by OS).
+ * Folder structure on device:
+ *   {documentDirectory}/AIFDMS/
+ *     messages/
+ *       convos.enc            → encrypted conversation list
+ *       {convId}.enc          → encrypted messages per conversation
+ *     media/
+ *       {messageId}.jpg       → cached chat images
  *
- * Encryption: XOR cipher with a 256-char random key stored in expo-secure-store.
- * This prevents casual reading of chat files on rooted devices.
+ * Images are also auto-saved to a gallery album called "AIFDMS"
+ * so users can browse them in their phone's Photos/Gallery app.
  *
- * Structure:
- *   {documentDirectory}/chat/
- *     convos.enc          → encrypted conversation list
- *     msgs_{convId}.enc   → encrypted messages per conversation
- *     img_{hash}.jpg      → cached chat images
+ * Encryption: XOR cipher with a 256-char random key stored in
+ * expo-secure-store (hardware-backed keychain).
  */
 
-const CHAT_DIR_NAME = 'chat';
-const KEY_STORE_ID = 'chat_encryption_key';
+const ROOT_DIR = 'AIFDMS';
+const MESSAGES_DIR = `${ROOT_DIR}/messages`;
+const MEDIA_DIR = `${ROOT_DIR}/media`;
+const KEY_STORE_ID = 'aifdms_encryption_key';
 const CONVOS_FILE = 'convos.enc';
-const msgsFile = (convId: string) => `msgs_${convId}.enc`;
+const GALLERY_ALBUM = 'AIFDMS';
 
-let chatDir: string = '';
+const msgsFile = (convId: string) => `${convId}.enc`;
+
+let messagesDir: string = '';
+let mediaDir: string = '';
 let encKey: string = '';
+let initialized = false;
 
 // ─── Init ──────────────────────────────────────
 
 async function ensureInit() {
-  if (chatDir && encKey) return;
+  if (initialized) return;
 
-  // Set up directory.
-  chatDir = `${FileSystem.documentDirectory}${CHAT_DIR_NAME}/`;
-  const dirInfo = await FileSystem.getInfoAsync(chatDir);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(chatDir, { intermediates: true });
+  const docDir = FileSystem.documentDirectory ?? '';
+
+  // Create folder structure.
+  messagesDir = `${docDir}${MESSAGES_DIR}/`;
+  mediaDir = `${docDir}${MEDIA_DIR}/`;
+
+  for (const dir of [messagesDir, mediaDir]) {
+    const info = await FileSystem.getInfoAsync(dir);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
   }
 
-  // Set up encryption key.
+  // Set up encryption key (stored in hardware-backed secure store).
   let key = await SecureStore.getItemAsync(KEY_STORE_ID);
   if (!key) {
-    // Generate a random 256-char key on first use.
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-    key = Array.from({ length: 256 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    key = Array.from({ length: 256 }, () =>
+      chars[Math.floor(Math.random() * chars.length)],
+    ).join('');
     await SecureStore.setItemAsync(KEY_STORE_ID, key);
   }
   encKey = key;
+  initialized = true;
 }
 
 // ─── Encryption ────────────────────────────────
@@ -55,7 +72,6 @@ function encrypt(plaintext: string): string {
   for (let i = 0; i < plaintext.length; i++) {
     bytes.push(plaintext.charCodeAt(i) ^ encKey.charCodeAt(i % encKey.length));
   }
-  // Encode as base64-safe string.
   return btoa(String.fromCharCode(...bytes));
 }
 
@@ -74,13 +90,13 @@ async function writeEncrypted(filename: string, data: any) {
   await ensureInit();
   const json = JSON.stringify(data);
   const encrypted = encrypt(json);
-  await FileSystem.writeAsStringAsync(chatDir + filename, encrypted);
+  await FileSystem.writeAsStringAsync(messagesDir + filename, encrypted);
 }
 
 async function readEncrypted<T>(filename: string): Promise<T | null> {
   await ensureInit();
   try {
-    const path = chatDir + filename;
+    const path = messagesDir + filename;
     const info = await FileSystem.getInfoAsync(path);
     if (!info.exists) return null;
     const encrypted = await FileSystem.readAsStringAsync(path);
@@ -141,7 +157,6 @@ export async function getCachedMessages(conversationId: string): Promise<CachedM
 }
 
 export async function setCachedMessages(conversationId: string, messages: CachedMessage[]) {
-  // Keep only latest 200 messages per conversation (prevent bloat).
   const trimmed = messages.slice(-200);
   await writeEncrypted(msgsFile(conversationId), trimmed);
 }
@@ -159,33 +174,43 @@ export function getLastCachedMessageId(messages: CachedMessage[]): string | unde
   return messages.length > 0 ? messages[messages.length - 1].id : undefined;
 }
 
-// ─── Image Caching ─────────────────────────────
+// ─── Image Caching (AIFDMS/media/) ─────────────
 
-const IMG_DIR_NAME = 'chat/images/';
-
-async function ensureImgDir() {
-  await ensureInit();
-  const imgDir = `${FileSystem.documentDirectory}${IMG_DIR_NAME}`;
-  const info = await FileSystem.getInfoAsync(imgDir);
-  if (!info.exists) {
-    await FileSystem.makeDirectoryAsync(imgDir, { intermediates: true });
-  }
-  return imgDir;
-}
-
-/** Download a chat image to local storage. Returns the local file URI. */
+/**
+ * Download a chat image to AIFDMS/media/ and also save to the
+ * "AIFDMS" album in the phone's gallery for easy browsing.
+ */
 export async function cacheImage(remoteUrl: string, messageId: string): Promise<string | null> {
   try {
-    const imgDir = await ensureImgDir();
-    const localPath = `${imgDir}${messageId}.jpg`;
+    await ensureInit();
+    const localPath = `${mediaDir}${messageId}.jpg`;
 
-    // Check if already cached.
+    // Already cached?
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists) return localPath;
 
-    // Download.
+    // Download to AIFDMS/media/.
     const result = await FileSystem.downloadAsync(remoteUrl, localPath);
-    return result.status === 200 ? localPath : null;
+    if (result.status !== 200) return null;
+
+    // Also save to phone gallery under "AIFDMS" album (best-effort).
+    try {
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      if (status === 'granted') {
+        const asset = await MediaLibrary.createAssetAsync(localPath);
+        // Get or create the "AIFDMS" album.
+        let album = await MediaLibrary.getAlbumAsync(GALLERY_ALBUM);
+        if (album) {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        } else {
+          await MediaLibrary.createAlbumAsync(GALLERY_ALBUM, asset, false);
+        }
+      }
+    } catch {
+      // Gallery save is best-effort — don't fail the cache.
+    }
+
+    return localPath;
   } catch {
     return null;
   }
@@ -194,8 +219,8 @@ export async function cacheImage(remoteUrl: string, messageId: string): Promise<
 /** Get cached local path for an image (without downloading). */
 export async function getCachedImagePath(messageId: string): Promise<string | null> {
   try {
-    const imgDir = `${FileSystem.documentDirectory}${IMG_DIR_NAME}`;
-    const localPath = `${imgDir}${messageId}.jpg`;
+    await ensureInit();
+    const localPath = `${mediaDir}${messageId}.jpg`;
     const info = await FileSystem.getInfoAsync(localPath);
     return info.exists ? localPath : null;
   } catch {
@@ -205,18 +230,20 @@ export async function getCachedImagePath(messageId: string): Promise<string | nu
 
 // ─── Clear ─────────────────────────────────────
 
-/** Clear all chat storage (e.g. on logout). */
+/** Clear all AIFDMS chat storage (e.g. on logout). */
 export async function clearChatCache() {
   await ensureInit();
   try {
-    const info = await FileSystem.getInfoAsync(chatDir);
+    const rootDir = `${FileSystem.documentDirectory ?? ''}${ROOT_DIR}/`;
+    const info = await FileSystem.getInfoAsync(rootDir);
     if (info.exists) {
-      await FileSystem.deleteAsync(chatDir, { idempotent: true });
+      await FileSystem.deleteAsync(rootDir, { idempotent: true });
     }
+    initialized = false;
   } catch {}
 }
 
-/** Get the chat storage directory path (for debugging). */
+/** Get the storage root path (for debugging). */
 export function getChatStoragePath(): string {
-  return `${FileSystem.documentDirectory}${CHAT_DIR_NAME}/`;
+  return `${FileSystem.documentDirectory ?? ''}${ROOT_DIR}/`;
 }
