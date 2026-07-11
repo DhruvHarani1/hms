@@ -40,17 +40,25 @@ async function ensureInit() {
 
   const docDir = FileSystem.documentDirectory ?? '';
 
+  // Check cache version. If not v3 (corrupted by previous race condition), clear old cache once.
+  const cacheVersionKey = 'aifdms_chat_cache_version';
+  const currentVersion = await SecureStore.getItemAsync(cacheVersionKey);
+  if (currentVersion !== 'v3') {
+    try {
+      const rootDir = `${docDir}${ROOT_DIR}/`;
+      const info = await FileSystem.getInfoAsync(rootDir);
+      if (info.exists) {
+        await FileSystem.deleteAsync(rootDir, { idempotent: true });
+      }
+    } catch {}
+    await SecureStore.setItemAsync(cacheVersionKey, 'v3');
+  }
+
   // Set up message directory (private).
   messagesDir = `${docDir}${MESSAGES_DIR}/`;
   
-  // Set up media directory.
-  // On Android, we write directly to the public app-specific media directory.
-  // It is automatically scanned by the Gallery and visible as an album named "AIFDMS".
-  if (Platform.OS === 'android') {
-    mediaDir = 'file:///storage/emulated/0/Android/media/test.hms.mobile/AIFDMS/';
-  } else {
-    mediaDir = `${docDir}${MEDIA_DIR}/`;
-  }
+  // Set up media directory (private sandbox).
+  mediaDir = `${docDir}${MEDIA_DIR}/`;
 
   for (const dir of [messagesDir, mediaDir]) {
     const info = await FileSystem.getInfoAsync(dir);
@@ -184,10 +192,8 @@ export function getLastCachedMessageId(messages: CachedMessage[]): string | unde
 // ─── Image Caching (AIFDMS/media/) ─────────────
 
 /**
- * Download a chat image to our mediaDir folder.
- * On Android, this directory is the shared external app-media directory,
- * which is automatically scanned by the Gallery and shown under the "AIFDMS" album.
- * This saves the image EXACTLY ONCE on the device and avoids any background permission alerts!
+ * Download a chat image to our mediaDir folder and silently save to default gallery
+ * if permissions are granted (without prompting).
  */
 export async function cacheImage(remoteUrl: string, messageId: string): Promise<string | null> {
   try {
@@ -201,6 +207,16 @@ export async function cacheImage(remoteUrl: string, messageId: string): Promise<
     // Download directly to mediaDir.
     const result = await FileSystem.downloadAsync(remoteUrl, localPath);
     if (result.status !== 200) return null;
+
+    // Auto-save to phone gallery default folder (only if permissions are already granted).
+    try {
+      const { status } = await MediaLibrary.getPermissionsAsync();
+      if (status === 'granted') {
+        await MediaLibrary.saveToLibraryAsync(localPath);
+      }
+    } catch {
+      // Best-effort auto-save.
+    }
 
     return localPath;
   } catch {

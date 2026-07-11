@@ -68,12 +68,6 @@ export default function ChatMessagesScreen() {
     if (!viewerImage || saving) return;
     setSaving(true);
 
-    if (Platform.OS === 'android') {
-      Alert.alert('✅ Already Saved', 'This image is already automatically saved in your gallery\'s AIFDMS album.');
-      setSaving(false);
-      return;
-    }
-
     try {
       // Request media library permission.
       const { status } = await MediaLibrary.requestPermissionsAsync();

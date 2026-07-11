@@ -73,15 +73,25 @@ export function useChatConversations() {
 
 // ─── Messages hook (for a single conversation) ──────────────────
 
-export function useChatMessages(conversationId: string) {
+export function useChatMessages(conversationId: string | undefined) {
   const [messages, setMessages] = useState<CachedMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
   const lastIdRef = useRef<string | undefined>(undefined);
 
-  // Load cached messages on mount.
+  // Reset state and load cached messages on mount/change.
   useEffect(() => {
     mounted.current = true;
+    if (!conversationId) {
+      setMessages([]);
+      setLoading(false);
+      lastIdRef.current = undefined;
+      return;
+    }
+
+    setLoading(true);
+    setMessages([]);
+    lastIdRef.current = undefined;
 
     getCachedMessages(conversationId).then((cached) => {
       if (mounted.current) {
@@ -91,11 +101,14 @@ export function useChatMessages(conversationId: string) {
       }
     });
 
-    return () => { mounted.current = false; };
+    return () => {
+      mounted.current = false;
+    };
   }, [conversationId]);
 
   // Poll for new messages.
   useEffect(() => {
+    if (!conversationId) return;
     let timer: ReturnType<typeof setInterval>;
 
     const poll = async () => {
@@ -139,14 +152,14 @@ export function useChatMessages(conversationId: string) {
 
   // Mark as read whenever messages change.
   useEffect(() => {
-    if (messages.length > 0) {
-      api.patch(`/chat/conversations/${conversationId}/read`).catch(() => {});
-    }
+    if (!conversationId || messages.length === 0) return;
+    api.patch(`/chat/conversations/${conversationId}/read`).catch(() => {});
   }, [conversationId, messages.length]);
 
   // Send message function.
   const sendMessage = useCallback(
     async (content: string, type: 'text' | 'image' = 'text') => {
+      if (!conversationId) throw new Error('No active conversation');
       const res = await api.post(`/chat/conversations/${conversationId}/messages`, {
         content,
         type,
