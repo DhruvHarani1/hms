@@ -46,6 +46,7 @@ export default function CookLayout() {
       />
       {/* Not in tab bar — reached via navigation */}
       <Tabs.Screen name="chat" options={{ href: null }} />
+      <Tabs.Screen name="chat/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
 }

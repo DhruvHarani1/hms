@@ -69,18 +69,6 @@ export function ChatBubble({
               }}
               resizeMode="cover"
             />
-            {message.content && !message.content.startsWith('hms/') && (
-              <Text
-                style={{
-                  color: isMe ? '#fff' : colors.text,
-                  fontSize: 14,
-                  marginTop: 6,
-                  marginHorizontal: 8,
-                }}
-              >
-                {message.content}
-              </Text>
-            )}
           </Pressable>
         ) : (
           <Text
