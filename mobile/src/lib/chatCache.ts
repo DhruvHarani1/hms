@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import { Platform } from 'react-native';
 
 /**
  * Encrypted file-based chat storage under the "AIFDMS" folder.
@@ -10,14 +11,12 @@ import * as MediaLibrary from 'expo-media-library';
  *     messages/
  *       convos.enc            → encrypted conversation list
  *       {convId}.enc          → encrypted messages per conversation
- *     media/
- *       {messageId}.jpg       → cached chat images
  *
- * Images are also auto-saved to a gallery album called "AIFDMS"
- * so users can browse them in their phone's Photos/Gallery app.
- *
- * Encryption: XOR cipher with a 256-char random key stored in
- * expo-secure-store (hardware-backed keychain).
+ * Images folder:
+ *   Android: /storage/emulated/0/Android/media/test.hms.mobile/AIFDMS/
+ *            (Scanned automatically by phone gallery, visible as "AIFDMS" album,
+ *            requires zero permission prompts, stored only once!)
+ *   iOS:     {documentDirectory}/AIFDMS/media/
  */
 
 const ROOT_DIR = 'AIFDMS';
@@ -41,9 +40,17 @@ async function ensureInit() {
 
   const docDir = FileSystem.documentDirectory ?? '';
 
-  // Create folder structure.
+  // Set up message directory (private).
   messagesDir = `${docDir}${MESSAGES_DIR}/`;
-  mediaDir = `${docDir}${MEDIA_DIR}/`;
+  
+  // Set up media directory.
+  // On Android, we write directly to the public app-specific media directory.
+  // It is automatically scanned by the Gallery and visible as an album named "AIFDMS".
+  if (Platform.OS === 'android') {
+    mediaDir = 'file:///storage/emulated/0/Android/media/test.hms.mobile/AIFDMS/';
+  } else {
+    mediaDir = `${docDir}${MEDIA_DIR}/`;
+  }
 
   for (const dir of [messagesDir, mediaDir]) {
     const info = await FileSystem.getInfoAsync(dir);
@@ -177,8 +184,10 @@ export function getLastCachedMessageId(messages: CachedMessage[]): string | unde
 // ─── Image Caching (AIFDMS/media/) ─────────────
 
 /**
- * Download a chat image to AIFDMS/media/ and silently copy to the "AIFDMS" gallery album
- * if permissions are granted (without prompting).
+ * Download a chat image to our mediaDir folder.
+ * On Android, this directory is the shared external app-media directory,
+ * which is automatically scanned by the Gallery and shown under the "AIFDMS" album.
+ * This saves the image EXACTLY ONCE on the device and avoids any background permission alerts!
  */
 export async function cacheImage(remoteUrl: string, messageId: string): Promise<string | null> {
   try {
@@ -189,27 +198,9 @@ export async function cacheImage(remoteUrl: string, messageId: string): Promise<
     const info = await FileSystem.getInfoAsync(localPath);
     if (info.exists) return localPath;
 
-    // Download to AIFDMS/media/.
+    // Download directly to mediaDir.
     const result = await FileSystem.downloadAsync(remoteUrl, localPath);
     if (result.status !== 200) return null;
-
-    // Auto-save to phone gallery under "AIFDMS" album (only if permissions are already granted).
-    try {
-      const { status } = await MediaLibrary.getPermissionsAsync();
-      if (status === 'granted') {
-        const asset = await MediaLibrary.createAssetAsync(localPath);
-        const album = await MediaLibrary.getAlbumAsync(GALLERY_ALBUM);
-        if (album) {
-          // copy must be true to avoid permission prompt on Android 11+
-          await MediaLibrary.addAssetsToAlbumAsync([asset], album, true);
-        } else {
-          // copy must be true to avoid permission prompt on Android 11+
-          await MediaLibrary.createAlbumAsync(GALLERY_ALBUM, asset, true);
-        }
-      }
-    } catch {
-      // Best-effort auto-save.
-    }
 
     return localPath;
   } catch {
