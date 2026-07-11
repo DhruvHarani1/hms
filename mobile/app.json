@@ -20,7 +20,7 @@
     "android": {
       "package": "test.hms.mobile",
       "googleServicesFile": "./google-services.json",
-      "softwareKeyboardLayoutMode": "adjustResize",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
