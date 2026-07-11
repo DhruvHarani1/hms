@@ -1,10 +1,12 @@
 import { Tabs, useRouter } from 'expo-router';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { colors } from '@/src/lib/theme';
 import { BellButton } from '@/src/components/primitives';
 import { HeaderLogo } from '@/src/components/HeaderLogo';
 import { useUnread } from '@/src/hooks/useUnread';
+import { useChatUnread } from '@/src/hooks/useChat';
+import { ChatButton } from '@/src/components/ChatButton';
 import { api } from '@/src/lib/api';
 
 function icon(emoji: string) {
@@ -16,8 +18,12 @@ function icon(emoji: string) {
 export default function WardenLayout() {
   const router = useRouter();
   const unread = useUnread();
-  const bell = () => (
-    <BellButton count={unread} onPress={() => router.push('/notifications')} />
+  const chatUnread = useChatUnread();
+  const headerRight = () => (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <ChatButton count={chatUnread} onPress={() => router.push('/(warden)/chat')} />
+      <BellButton count={unread} onPress={() => router.push('/notifications')} />
+    </View>
   );
 
   const { data: requests } = useQuery({
@@ -40,7 +46,7 @@ export default function WardenLayout() {
           title: 'Home',
           tabBarIcon: icon('🏠'),
           headerTitle: () => <HeaderLogo />,
-          headerRight: bell,
+          headerRight,
         }}
       />
       <Tabs.Screen
@@ -71,6 +77,8 @@ export default function WardenLayout() {
       <Tabs.Screen name="leaves" options={{ href: null }} />
       <Tabs.Screen name="student-profile" options={{ href: null }} />
       <Tabs.Screen name="menu" options={{ href: null }} />
+      <Tabs.Screen name="chat" options={{ href: null }} />
     </Tabs>
   );
 }
+

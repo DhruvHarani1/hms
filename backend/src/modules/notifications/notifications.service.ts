@@ -131,6 +131,19 @@ export class NotificationsService {
     return this.notifyRoles(['student', 'warden', 'staff', 'cook'], params);
   }
 
+  /** Notify a specific set of user IDs (e.g. chat message recipients). */
+  async notifySpecificUsers(userIds: string[], params: {
+    hostelId: string;
+    type: NotificationType;
+    title: string;
+    body: string;
+    data?: Record<string, any>;
+    priority?: NotificationPriority;
+    createdBy?: string;
+  }) {
+    return this.notifyUsers(userIds, { ...params, audience: 'individual' });
+  }
+
   /** Students + cook (daily menu). */
   async notifyStudentsAndCook(params: {
     hostelId: string;

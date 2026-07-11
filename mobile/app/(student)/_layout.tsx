@@ -1,9 +1,11 @@
 import { Tabs, useRouter } from 'expo-router';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { colors } from '@/src/lib/theme';
 import { BellButton } from '@/src/components/primitives';
 import { HeaderLogo } from '@/src/components/HeaderLogo';
 import { useUnread } from '@/src/hooks/useUnread';
+import { useChatUnread } from '@/src/hooks/useChat';
+import { ChatButton } from '@/src/components/ChatButton';
 
 function icon(emoji: string) {
   return ({ color }: { color: string }) => (
@@ -14,8 +16,12 @@ function icon(emoji: string) {
 export default function StudentLayout() {
   const router = useRouter();
   const unread = useUnread();
-  const bell = () => (
-    <BellButton count={unread} onPress={() => router.push('/notifications')} />
+  const chatUnread = useChatUnread();
+  const headerRight = () => (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <ChatButton count={chatUnread} onPress={() => router.push('/(student)/chat')} />
+      <BellButton count={unread} onPress={() => router.push('/notifications')} />
+    </View>
   );
   return (
     <Tabs
@@ -31,7 +37,7 @@ export default function StudentLayout() {
           title: 'Home',
           tabBarIcon: icon('🏠'),
           headerTitle: () => <HeaderLogo />,
-          headerRight: bell,
+          headerRight,
         }}
       />
       <Tabs.Screen
@@ -54,6 +60,9 @@ export default function StudentLayout() {
         name="profile"
         options={{ title: 'Profile', tabBarIcon: icon('👤') }}
       />
+      {/* Not in tab bar — reached via navigation */}
+      <Tabs.Screen name="chat" options={{ href: null }} />
     </Tabs>
   );
 }
+

@@ -18,6 +18,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CleanupModule } from './modules/cleanup/cleanup.module';
 import { UsageModule } from './modules/usage/usage.module';
 import { BirthdayModule } from './modules/birthday/birthday.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -41,6 +42,7 @@ import { HealthController } from './health.controller';
     CleanupModule,
     UsageModule,
     BirthdayModule,
+    ChatModule,
   ],
   controllers: [HealthController],
 })
