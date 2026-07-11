@@ -8,6 +8,7 @@ import {
   getCachedMessages,
   appendCachedMessages,
   getLastCachedMessageId,
+  cacheImage,
 } from '../lib/chatCache';
 
 const POLL_INTERVAL = 3000;
@@ -117,6 +118,11 @@ export function useChatMessages(conversationId: string) {
 
           // Cache in background.
           appendCachedMessages(conversationId, newMsgs);
+
+          // Auto-download images to local storage.
+          newMsgs
+            .filter((m) => m.type === 'image' && m.imageUrl)
+            .forEach((m) => cacheImage(m.imageUrl!, m.id).catch(() => {}));
         }
       } catch {}
     };

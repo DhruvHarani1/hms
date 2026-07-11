@@ -51,6 +51,13 @@
         {
           "photosPermission": "Allow AIFDMS to access your photos to upload documents (Aadhaar, course proof, profile photo)."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow AIFDMS to save chat images to your gallery.",
+          "savePhotosPermission": "Allow AIFDMS to save chat images to your gallery."
+        }
       ]
     ],
     "extra": {

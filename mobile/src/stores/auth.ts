@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { api } from '@/src/lib/api';
 import { tokenStore } from '@/src/lib/storage';
+import { clearChatCache } from '@/src/lib/chatCache';
 
 export type Role = 'warden' | 'staff' | 'student' | 'super_admin' | 'cook';
 
@@ -45,6 +46,7 @@ export const useAuth = create<AuthState>((set) => ({
       // ignore network errors on logout
     }
     await tokenStore.clear();
+    await clearChatCache();
     set({ user: null });
   },
 
