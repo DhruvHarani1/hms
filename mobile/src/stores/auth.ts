@@ -46,7 +46,8 @@ export const useAuth = create<AuthState>((set) => ({
       // ignore network errors on logout
     }
     await tokenStore.clear();
-    await clearChatCache();
+    // Chat data is intentionally kept on device (like WhatsApp).
+    // Only cleared on app uninstall or account deletion.
     set({ user: null });
   },
 
