@@ -486,6 +486,12 @@ export class AuthService {
       include: { studentProfile: true, hostel: true },
     });
     if (!user) throw new UnauthorizedException();
+
+    // Force logout unverified student accounts
+    if (user.role === 'student' && !user.emailVerified) {
+      throw new UnauthorizedException('Email verification required');
+    }
+
     return this.sanitize(user);
   }
 }
