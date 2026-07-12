@@ -3,6 +3,8 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
@@ -307,11 +309,14 @@ export class AuthService {
 
     // Email verification guard for student accounts
     if (user.role === 'student' && !user.emailVerified) {
-      throw new ForbiddenException({
-        message: 'Please verify your email address to continue.',
-        emailVerified: false,
-        email: user.email,
-      });
+      throw new HttpException(
+        {
+          message: 'Please verify your email address to continue.',
+          emailVerified: false,
+          email: user.email,
+        },
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     // Approval-gated login: give clear, specific reasons.
