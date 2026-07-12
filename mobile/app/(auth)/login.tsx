@@ -25,6 +25,26 @@ export default function Login() {
       registerForPush();
       registerWebPush();
     } catch (e: any) {
+      const errData = e?.response?.data;
+      if (errData && errData.emailVerified === false) {
+        Alert.alert(
+          'Email Verification Required',
+          errData.message || 'Please verify your email address to continue.',
+          [
+            {
+              text: 'Verify Now',
+              onPress: () => {
+                router.push({
+                  pathname: '/(auth)/verify',
+                  params: { email: errData.email || email.trim().toLowerCase() },
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       Alert.alert(
         'Login failed',
         e?.response?.data?.message ?? 'Check your credentials and try again.',

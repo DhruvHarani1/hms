@@ -114,6 +114,7 @@ export class StudentsController {
         hostelId: user.hostelId,
         role: { in: ['student', 'cook'] },
         status: 'pending',
+        emailVerified: { not: null },
         deletedAt: null,
       },
       include: { studentProfile: true },

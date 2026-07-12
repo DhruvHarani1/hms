@@ -11,6 +11,7 @@ export interface AuthUser {
   email: string;
   role: Role;
   hostelId: string;
+  emailVerified: string | null;
 }
 
 interface AuthState {
@@ -20,6 +21,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   bootstrap: () => Promise<void>;
+  updateEmailVerification: (email: string, emailVerified: string) => void;
 }
 
 export const useAuth = create<AuthState>((set) => ({
@@ -65,5 +67,12 @@ export const useAuth = create<AuthState>((set) => ({
     } finally {
       set({ initialized: true });
     }
+  },
+
+  updateEmailVerification: (email, emailVerified) => {
+    set((state) => {
+      if (!state.user) return {};
+      return { user: { ...state.user, email, emailVerified } };
+    });
   },
 }));

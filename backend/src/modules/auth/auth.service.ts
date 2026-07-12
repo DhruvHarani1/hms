@@ -83,6 +83,7 @@ export class AuthService {
    * Public self-registration → creates a PENDING student that a warden must
    * approve before they can log in. If a previously REJECTED user re-applies
    * with the same email, we flip them back to pending (re-request).
+   * Note: Newly registered users must complete email OTP verification.
    */
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase();
@@ -109,6 +110,7 @@ export class AuthService {
             passwordHash,
             status: 'pending',
             rejectionReason: null,
+            emailVerified: null, // Reset to trigger verification on re-apply
           },
         });
         await this.prisma.studentProfile.updateMany({
@@ -119,10 +121,10 @@ export class AuthService {
           },
         });
 
-        // Email: welcome (re-apply) + notify wardens.
-        this.sendRegistrationEmails(email, dto.fullName, existing.role, existing.hostelId);
+        // Send OTP verification email in background
+        await this.generateAndSendOtp(email, dto.fullName);
 
-        return { status: 'pending', reapplied: true };
+        return { status: 'pending', emailVerified: false, email };
       }
       throw new BadRequestException('This email cannot be registered.');
     }
@@ -147,6 +149,7 @@ export class AuthService {
         phone: dto.phone,
         passwordHash,
         status: 'pending',
+        emailVerified: null, // Starts unverified
         // Only students get a profile record.
         ...(role === 'student'
           ? {
@@ -162,10 +165,112 @@ export class AuthService {
       },
     });
 
-    // Email: welcome + notify wardens.
-    this.sendRegistrationEmails(email, dto.fullName, role, hostel.id);
+    // Send verification OTP in background
+    await this.generateAndSendOtp(email, dto.fullName);
 
-    return { status: 'pending', reapplied: false, role };
+    return { status: 'pending', emailVerified: false, email };
+  }
+
+  /** Generate a random 6-digit numeric OTP and email it to the user. */
+  private async generateAndSendOtp(email: string, fullName: string) {
+    const otp = randomInt(100000, 999999).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes TTL
+
+    await this.prisma.emailOtp.upsert({
+      where: { email },
+      create: { email, otp, expiresAt },
+      update: { otp, expiresAt, createdAt: new Date() },
+    });
+
+    // Dev fallback: return or print dev OTP
+    if (!this.mail.isConfigured()) {
+      // eslint-disable-next-line no-console
+      console.log(`[DEV OTP] Verification code for ${email} is: ${otp}`);
+    }
+
+    await this.mail.sendVerificationOtp(email, fullName, otp).catch((e) => this.mailError(e));
+  }
+
+  /** Verify the email OTP. Handles new email correction if provided. */
+  async verifyOtp(email: string, otp: string, newEmail?: string) {
+    const targetEmail = email.toLowerCase();
+    const verification = await this.prisma.emailOtp.findUnique({
+      where: { email: targetEmail },
+    });
+
+    if (!verification || verification.otp !== otp || verification.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { email: targetEmail },
+    });
+    if (!user) {
+      throw new BadRequestException('User account not found');
+    }
+
+    let finalEmail = targetEmail;
+    if (newEmail) {
+      const cleanNewEmail = newEmail.trim().toLowerCase();
+      if (cleanNewEmail !== targetEmail) {
+        const emailInUse = await this.prisma.user.findUnique({
+          where: { email: cleanNewEmail },
+        });
+        if (emailInUse) {
+          throw new BadRequestException('The new email address is already in use.');
+        }
+        finalEmail = cleanNewEmail;
+      }
+    }
+
+    // Mark as verified & update email.
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: finalEmail,
+        emailVerified: new Date(),
+      },
+    });
+
+    // Delete OTP records.
+    await this.prisma.emailOtp.deleteMany({
+      where: { email: { in: [targetEmail, finalEmail] } },
+    });
+
+    // Trigger registration emails to the warden and user welcome.
+    this.sendRegistrationEmails(finalEmail, user.fullName, user.role, user.hostelId);
+
+    // If they updated their email, return the updated email
+    return { success: true, emailVerified: true, email: finalEmail };
+  }
+
+  /** Resend email verification OTP. Can update target email if newEmail is provided. */
+  async resendOtp(email: string, newEmail?: string) {
+    const targetEmail = email.toLowerCase();
+    const user = await this.prisma.user.findFirst({
+      where: { email: targetEmail },
+    });
+    if (!user) {
+      throw new BadRequestException('User account not found');
+    }
+
+    let sendToEmail = targetEmail;
+    if (newEmail) {
+      const cleanNewEmail = newEmail.trim().toLowerCase();
+      if (cleanNewEmail !== targetEmail) {
+        const emailInUse = await this.prisma.user.findUnique({
+          where: { email: cleanNewEmail },
+        });
+        if (emailInUse) {
+          throw new BadRequestException('The new email address is already in use.');
+        }
+        sendToEmail = cleanNewEmail;
+      }
+    }
+
+    // Generate and send OTP to the final destination
+    await this.generateAndSendOtp(sendToEmail, user.fullName);
+    return { success: true, sentTo: sendToEmail };
   }
 
   /** Fire-and-forget: send welcome email to user + new-request alert to wardens. */
@@ -195,6 +300,20 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    const valid = await argon2.verify(user.passwordHash, dto.password);
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Email verification guard for student accounts
+    if (user.role === 'student' && !user.emailVerified) {
+      throw new ForbiddenException({
+        message: 'Please verify your email address to continue.',
+        emailVerified: false,
+        email: user.email,
+      });
+    }
+
     // Approval-gated login: give clear, specific reasons.
     if (user.status === 'pending') {
       throw new ForbiddenException(
@@ -210,11 +329,6 @@ export class AuthService {
     }
     if (user.status !== 'active') {
       throw new UnauthorizedException('Account is not active');
-    }
-
-    const valid = await argon2.verify(user.passwordHash, dto.password);
-    if (!valid) {
-      throw new UnauthorizedException('Invalid credentials');
     }
 
     await this.prisma.user.update({

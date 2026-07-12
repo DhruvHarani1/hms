@@ -160,6 +160,36 @@ export class MailService {
     await this.sendMail(to, `${code} is your AIFDMS Hostel password reset code`, html, text);
   }
 
+  async sendVerificationOtp(to: string, fullName: string, code: string) {
+    const spacedCode = code.split('').join(' ');
+    const codeBlock = `
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
+        <tr><td align="center" style="background:${this.BRAND_LIGHT};border:1px solid ${this.BRAND_BORDER};border-radius:12px;padding:20px;">
+          <div style="font-family:Consolas,Menlo,monospace;font-size:34px;font-weight:800;letter-spacing:8px;color:${this.BRAND};">${spacedCode}</div>
+        </td></tr>
+      </table>`;
+
+    const bodyHtml =
+      `Hi <strong>${fullName}</strong>, thank you for signing up for the AIFDMS Hostel App! ` +
+      `Please use the 6-digit OTP code below to verify your email address. ` +
+      `This code expires in <strong>15 minutes</strong>.` +
+      codeBlock;
+
+    const text =
+      `Hi ${fullName},\n\n` +
+      `Thank you for signing up for the AIFDMS Hostel App! Your verification code is: ${code}\n` +
+      `This code expires in 15 minutes.\n\n` +
+      `— AIFDMS Hostel`;
+
+    const html = this.baseHtml(
+      'Verify your email address',
+      bodyHtml,
+      `Never share this code with anyone; AIFDMS staff will never ask for it.`,
+    );
+
+    await this.sendMail(to, `${code} is your AIFDMS Hostel verification code`, html, text);
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   //  2. WELCOME / GREETING  (on signup)
   // ═══════════════════════════════════════════════════════════════════

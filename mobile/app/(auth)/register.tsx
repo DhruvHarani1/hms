@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
@@ -38,12 +38,28 @@ export default function Register() {
         role: role === 'Cook' ? 'cook' : 'student',
       });
       const reapplied = res.data?.reapplied;
-      setMsg({
-        kind: 'ok',
-        text: reapplied
-          ? '✅ Request re-submitted. The warden will review it again.'
-          : '✅ Join request sent! You can log in once the warden approves it.',
-      });
+      if (reapplied) {
+        setMsg({
+          kind: 'ok',
+          text: '✅ Request re-submitted. The warden will review it again.',
+        });
+      } else {
+        Alert.alert(
+          'Verification Required',
+          'A verification code was sent to your email. Please verify to complete your signup.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.replace({
+                  pathname: '/(auth)/verify',
+                  params: { email: email.trim().toLowerCase() },
+                });
+              },
+            },
+          ]
+        );
+      }
     } catch (e: any) {
       setMsg({
         kind: 'err',

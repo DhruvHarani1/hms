@@ -571,3 +571,13 @@ model Message {
   @@index([conversationId, createdAt])
   @@map("messages")
 }
+
+model EmailOtp {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  otp       String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("email_otps")
+}

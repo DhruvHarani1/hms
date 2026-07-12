@@ -78,3 +78,25 @@ export class ChangePasswordDto {
   @MinLength(8)
   newPassword: string;
 }
+
+export class VerifyOtpDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  otp: string;
+
+  @IsOptional()
+  @IsEmail()
+  newEmail?: string;
+}
+
+export class ResendOtpDto {
+  @IsEmail()
+  email: string;
+
+  @IsOptional()
+  @IsEmail()
+  newEmail?: string;
+}

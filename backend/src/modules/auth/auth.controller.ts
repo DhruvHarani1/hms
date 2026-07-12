@@ -13,6 +13,8 @@ import {
   RefreshDto,
   RegisterDto,
   ResetPasswordDto,
+  VerifyOtpDto,
+  ResendOtpDto,
 } from './dto/auth.dto';
 
 @Controller('auth')
@@ -24,6 +26,20 @@ export class AuthController {
   @HttpCode(201)
   register(@Body() dto: RegisterDto) {
     return this.auth.register(dto);
+  }
+
+  @Public()
+  @Post('verify-otp')
+  @HttpCode(200)
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.auth.verifyOtp(dto.email, dto.otp, dto.newEmail);
+  }
+
+  @Public()
+  @Post('resend-otp')
+  @HttpCode(200)
+  resendOtp(@Body() dto: ResendOtpDto) {
+    return this.auth.resendOtp(dto.email, dto.newEmail);
   }
 
   @Public()
