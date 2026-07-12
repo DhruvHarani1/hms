@@ -30,8 +30,14 @@ export default function Login() {
         ? errData.message 
         : (errData?.message?.message || e?.message || '');
 
-      const isTextUnverified = alertMsg.toLowerCase().includes('verify your email') || alertMsg.toLowerCase().includes('verify email');
-      const isUnverified = isTextUnverified || (errData && (errData.emailVerified === false || errData.message?.emailVerified === false));
+      const isTextUnverified = alertMsg.toLowerCase().includes('verify your email') || alertMsg.toLowerCase().includes('verify email') || alertMsg.toLowerCase().includes('email verification required');
+      const isUnverified = isTextUnverified || 
+                           (errData && (
+                             errData.emailVerified === false || 
+                             errData.message?.emailVerified === false ||
+                             errData.verifyEmailRequired === true ||
+                             errData.message?.verifyEmailRequired === true
+                           ));
       
       if (isUnverified) {
         const targetEmail = errData?.email || errData?.message?.email || email.trim().toLowerCase();

@@ -313,6 +313,7 @@ export class AuthService {
         {
           message: 'Please verify your email address to continue.',
           emailVerified: false,
+          verifyEmailRequired: true,
           email: user.email,
         },
         HttpStatus.FORBIDDEN,
