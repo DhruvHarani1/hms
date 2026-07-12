@@ -26,17 +26,18 @@ export default function Login() {
       registerWebPush();
     } catch (e: any) {
       const errData = e?.response?.data;
-      const isUnverified = errData && (errData.emailVerified === false || errData.message?.emailVerified === false);
+      const alertMsg = typeof errData?.message === 'string' 
+        ? errData.message 
+        : (errData?.message?.message || e?.message || '');
+
+      const isTextUnverified = alertMsg.toLowerCase().includes('verify your email') || alertMsg.toLowerCase().includes('verify email');
+      const isUnverified = isTextUnverified || (errData && (errData.emailVerified === false || errData.message?.emailVerified === false));
       
       if (isUnverified) {
-        const targetEmail = errData.email || errData.message?.email || email.trim().toLowerCase();
-        const alertMsg = typeof errData.message === 'string' 
-          ? errData.message 
-          : (errData.message?.message || 'Please verify your email address to continue.');
-
+        const targetEmail = errData?.email || errData?.message?.email || email.trim().toLowerCase();
         Alert.alert(
           'Email Verification Required',
-          alertMsg,
+          alertMsg || 'Please verify your email address to continue.',
           [
             {
               text: 'Verify Now',
