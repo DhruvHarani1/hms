@@ -116,7 +116,11 @@ export default function Verify() {
       await logout();
       router.replace('/(auth)/login');
     } catch {
-      Alert.alert('Error', 'Logout failed.');
+      if (Platform.OS === 'web') {
+        alert('Error: Logout failed.');
+      } else {
+        Alert.alert('Error', 'Logout failed.');
+      }
     } finally {
       setBusy(false);
     }

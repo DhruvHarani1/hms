@@ -16,7 +16,11 @@ export default function Login() {
 
   async function onSubmit() {
     if (!email || !password) {
-      Alert.alert('Missing details', 'Enter your email and password.');
+      if (Platform.OS === 'web') {
+        alert('Missing details: Enter your email and password.');
+      } else {
+        Alert.alert('Missing details', 'Enter your email and password.');
+      }
       return;
     }
     try {
@@ -67,10 +71,12 @@ export default function Login() {
         return;
       }
 
-      Alert.alert(
-        'Login failed',
-        e?.response?.data?.message ?? 'Check your credentials and try again.',
-      );
+      const failMsg = e?.response?.data?.message ?? 'Check your credentials and try again.';
+      if (Platform.OS === 'web') {
+        alert('Login failed: ' + failMsg);
+      } else {
+        Alert.alert('Login failed', failMsg);
+      }
     }
   }
 
