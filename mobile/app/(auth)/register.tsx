@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, Text, View, Alert, Platform } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
+import { showAlert } from '@/src/lib/showAlert';
+import { isValidEmail } from '@/src/lib/validation';
 import { SelectField } from '@/src/components/form';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors, radius } from '@/src/lib/theme';
@@ -15,58 +17,59 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('Student');
   const [busy, setBusy] = useState(false);
-  // Inline messages (Alert is unreliable on web).
+  // Inline messages (works on both web and native).
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   async function onSubmit() {
     setMsg(null);
-    if (!fullName || !email || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedName = fullName.trim();
+
+    if (!trimmedName || !trimmedEmail || !password) {
       setMsg({ kind: 'err', text: 'Name, email and password are required.' });
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      setMsg({ kind: 'err', text: 'Please enter a valid email address.' });
       return;
     }
     if (password.length < 8) {
       setMsg({ kind: 'err', text: 'Password must be at least 8 characters.' });
       return;
     }
+
     setBusy(true);
     try {
       const res = await api.post('/auth/register', {
-        fullName,
-        email: email.trim().toLowerCase(),
-        phone: phone || undefined,
+        fullName: trimmedName,
+        email: trimmedEmail,
+        phone: phone.trim() || undefined,
         password,
         role: role === 'Cook' ? 'cook' : 'student',
       });
-      const reapplied = res.data?.reapplied;
-      if (reapplied) {
+
+      if (res.data?.reapplied) {
         setMsg({
           kind: 'ok',
           text: '✅ Request re-submitted. The warden will review it again.',
         });
       } else {
-        if (Platform.OS === 'web') {
-          alert('Verification Required: A verification code was sent to your email. Please verify to complete your signup.');
-          router.replace({
-            pathname: '/(auth)/verify',
-            params: { email: email.trim().toLowerCase() },
-          });
-        } else {
-          Alert.alert(
-            'Verification Required',
-            'A verification code was sent to your email. Please verify to complete your signup.',
-            [
-              {
-                text: 'OK',
-                onPress: () => {
-                  router.replace({
-                    pathname: '/(auth)/verify',
-                    params: { email: email.trim().toLowerCase() },
-                  });
-                },
+        // Redirect to verification screen
+        showAlert(
+          'Verification Required',
+          'A verification code was sent to your email. Please verify to complete your signup.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.replace({
+                  pathname: '/(auth)/verify',
+                  params: { email: trimmedEmail },
+                });
               },
-            ]
-          );
-        }
+            },
+          ],
+        );
       }
     } catch (e: any) {
       setMsg({

@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, View, Text, Platform } from 'react-native';
+import { Image, Pressable, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/stores/auth';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
+import { showAlert } from '@/src/lib/showAlert';
+import { isValidEmail } from '@/src/lib/validation';
 import { registerForPush } from '@/src/notifications/register';
 import { registerWebPush } from '@/src/notifications/webpush';
 
@@ -15,68 +17,63 @@ export default function Login() {
   const [password, setPassword] = useState('');
 
   async function onSubmit() {
-    if (!email || !password) {
-      if (Platform.OS === 'web') {
-        alert('Missing details: Enter your email and password.');
-      } else {
-        Alert.alert('Missing details', 'Enter your email and password.');
-      }
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail || !password) {
+      showAlert('Missing details', 'Enter your email and password.');
       return;
     }
+    if (!isValidEmail(trimmedEmail)) {
+      showAlert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
+
     try {
-      await login(email.trim().toLowerCase(), password);
+      await login(trimmedEmail, password);
       // Register for pushes (non-blocking). Native = FCM/APNs, web = web push.
       registerForPush();
       registerWebPush();
     } catch (e: any) {
       const errData = e?.response?.data;
-      const alertMsg = typeof errData?.message === 'string' 
-        ? errData.message 
-        : (errData?.message?.message || e?.message || '');
+      const alertMsg =
+        typeof errData?.message === 'string'
+          ? errData.message
+          : errData?.message?.message || e?.message || '';
 
-      const isTextUnverified = alertMsg.toLowerCase().includes('verify your email') || alertMsg.toLowerCase().includes('verify email') || alertMsg.toLowerCase().includes('email verification required');
-      const isUnverified = isTextUnverified || 
-                           (errData && (
-                             errData.emailVerified === false || 
-                             errData.message?.emailVerified === false ||
-                             errData.verifyEmailRequired === true ||
-                             errData.message?.verifyEmailRequired === true
-                           ));
-      
+      // Detect "email not verified" responses — check explicit flags first,
+      // then fall back to text matching for maximum resilience.
+      const isUnverified =
+        errData?.verifyEmailRequired === true ||
+        errData?.message?.verifyEmailRequired === true ||
+        errData?.emailVerified === false ||
+        errData?.message?.emailVerified === false ||
+        /verify\s*(your\s*)?email/i.test(alertMsg);
+
       if (isUnverified) {
-        const targetEmail = errData?.email || errData?.message?.email || email.trim().toLowerCase();
-        if (Platform.OS === 'web') {
-          alert('Email Verification Required: ' + (alertMsg || 'Please verify your email address to continue.'));
-          router.push({
-            pathname: '/(auth)/verify',
-            params: { email: targetEmail },
-          });
-        } else {
-          Alert.alert(
-            'Email Verification Required',
-            alertMsg || 'Please verify your email address to continue.',
-            [
-              {
-                text: 'Verify Now',
-                onPress: () => {
-                  router.push({
-                    pathname: '/(auth)/verify',
-                    params: { email: targetEmail },
-                  });
-                },
+        const targetEmail =
+          errData?.email || errData?.message?.email || trimmedEmail;
+        showAlert(
+          'Email Verification Required',
+          alertMsg || 'Please verify your email address to continue.',
+          [
+            {
+              text: 'Verify Now',
+              onPress: () => {
+                router.push({
+                  pathname: '/(auth)/verify',
+                  params: { email: targetEmail },
+                });
               },
-            ]
-          );
-        }
+            },
+          ],
+        );
         return;
       }
 
-      const failMsg = e?.response?.data?.message ?? 'Check your credentials and try again.';
-      if (Platform.OS === 'web') {
-        alert('Login failed: ' + failMsg);
-      } else {
-        Alert.alert('Login failed', failMsg);
-      }
+      // Generic login failure (wrong credentials, pending approval, etc.)
+      const failMsg =
+        errData?.message ?? 'Check your credentials and try again.';
+      showAlert('Login failed', typeof failMsg === 'string' ? failMsg : 'Check your credentials and try again.');
     }
   }
 

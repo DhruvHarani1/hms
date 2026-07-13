@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Image, ScrollView, Text, View, Alert, TextInput, Platform } from 'react-native';
+import { Image, ScrollView, Text, View, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
+import { showAlert } from '@/src/lib/showAlert';
+import { isValidEmail, digitsOnly } from '@/src/lib/validation';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors, radius } from '@/src/lib/theme';
 
@@ -32,6 +34,20 @@ export default function Verify() {
 
   async function sendOtp() {
     setMsg(null);
+
+    // If editing, validate the new email first.
+    if (isEditing) {
+      const newEmail = editingEmail.trim().toLowerCase();
+      if (!newEmail) {
+        setMsg({ kind: 'err', text: 'Please enter an email address.' });
+        return;
+      }
+      if (!isValidEmail(newEmail)) {
+        setMsg({ kind: 'err', text: 'Please enter a valid email address.' });
+        return;
+      }
+    }
+
     setBusy(true);
     try {
       const payload: any = { email: currentEmail };
@@ -83,23 +99,25 @@ export default function Verify() {
         updateEmailVerification(finalEmail, new Date().toISOString());
       }
 
-      if (Platform.OS === 'web') {
-        alert('✅ Verified: Email address verified successfully!');
-        if (!user) {
-          router.replace('/(auth)/login');
-        }
-      } else {
-        Alert.alert('✅ Verified', 'Email address verified successfully!', [
-          {
-            text: 'Proceed',
-            onPress: () => {
-              if (!user) {
-                router.replace('/(auth)/login');
-              }
-            },
+      showAlert('✅ Verified', 'Email address verified successfully!', [
+        {
+          text: 'Proceed',
+          onPress: () => {
+            if (user) {
+              // Logged-in user — navigate to home
+              router.replace(
+                user.role === 'student'
+                  ? '/(student)'
+                  : user.role === 'cook'
+                    ? '/(cook)'
+                    : '/(warden)',
+              );
+            } else {
+              router.replace('/(auth)/login');
+            }
           },
-        ]);
-      }
+        },
+      ]);
     } catch (e: any) {
       setMsg({
         kind: 'err',
@@ -116,14 +134,15 @@ export default function Verify() {
       await logout();
       router.replace('/(auth)/login');
     } catch {
-      if (Platform.OS === 'web') {
-        alert('Error: Logout failed.');
-      } else {
-        Alert.alert('Error', 'Logout failed.');
-      }
+      showAlert('Error', 'Logout failed.');
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Filter OTP input to digits only (keyboardType="number-pad" is ignored on web). */
+  function handleOtpChange(value: string) {
+    setOtp(digitsOnly(value).slice(0, 6));
   }
 
   return (
@@ -223,7 +242,7 @@ export default function Verify() {
             <Field
               label="6-Digit Verification Code (OTP)"
               value={otp}
-              onChangeText={setOtp}
+              onChangeText={handleOtpChange}
               keyboardType="number-pad"
               maxLength={6}
               placeholder="123456"

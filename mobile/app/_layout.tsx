@@ -32,7 +32,7 @@ function AuthGate() {
 
     if (!user && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (user && user.role === 'student' && !user.emailVerified) {
+    } else if (user && (user.role === 'student' || user.role === 'cook') && !user.emailVerified) {
       const pathSegments = segments as string[];
       const onVerifyScreen = pathSegments[0] === '(auth)' && pathSegments[1] === 'verify';
       if (!onVerifyScreen) {

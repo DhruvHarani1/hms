@@ -3,6 +3,7 @@ import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
+import { isValidEmail } from '@/src/lib/validation';
 import { Button, Field, H1, Muted } from '@/src/components/ui';
 import { colors, radius } from '@/src/lib/theme';
 
@@ -17,8 +18,12 @@ export default function Forgot() {
 
   async function sendCode() {
     setMsg(null);
-    if (!email) {
+    if (!email.trim()) {
       setMsg({ kind: 'err', text: 'Enter your email.' });
+      return;
+    }
+    if (!isValidEmail(email.trim())) {
+      setMsg({ kind: 'err', text: 'Please enter a valid email address.' });
       return;
     }
     setBusy(true);

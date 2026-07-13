@@ -307,8 +307,8 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Email verification guard for student accounts
-    if (user.role === 'student' && !user.emailVerified) {
+    // Email verification guard for student and cook accounts
+    if ((user.role === 'student' || user.role === 'cook') && !user.emailVerified) {
       throw new HttpException(
         {
           message: 'Please verify your email address to continue.',
@@ -493,8 +493,8 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
 
-    // Force logout unverified student accounts
-    if (user.role === 'student' && !user.emailVerified) {
+    // Force logout unverified student and cook accounts
+    if ((user.role === 'student' || user.role === 'cook') && !user.emailVerified) {
       throw new UnauthorizedException('Email verification required');
     }
 
