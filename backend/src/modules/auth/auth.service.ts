@@ -493,10 +493,11 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
 
-    // Force logout unverified student and cook accounts
-    if ((user.role === 'student' || user.role === 'cook') && !user.emailVerified) {
-      throw new UnauthorizedException('Email verification required');
-    }
+    // NOTE: We intentionally do NOT reject unverified users here.
+    // The client-side AuthGate redirects unverified accounts to the
+    // verify screen.  Throwing 401 here caused a wasteful token-refresh
+    // retry loop (3 sequential network requests) that added 1-3 seconds
+    // to every app launch for unverified users.
 
     return this.sanitize(user);
   }
