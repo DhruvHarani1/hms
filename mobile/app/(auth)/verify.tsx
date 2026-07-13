@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Image, ScrollView, Text, View, Alert, TextInput } from 'react-native';
+import { Image, ScrollView, Text, View, Alert, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
@@ -83,16 +83,23 @@ export default function Verify() {
         updateEmailVerification(finalEmail, new Date().toISOString());
       }
 
-      Alert.alert('✅ Verified', 'Email address verified successfully!', [
-        {
-          text: 'Proceed',
-          onPress: () => {
-            if (!user) {
-              router.replace('/(auth)/login');
-            }
+      if (Platform.OS === 'web') {
+        alert('✅ Verified: Email address verified successfully!');
+        if (!user) {
+          router.replace('/(auth)/login');
+        }
+      } else {
+        Alert.alert('✅ Verified', 'Email address verified successfully!', [
+          {
+            text: 'Proceed',
+            onPress: () => {
+              if (!user) {
+                router.replace('/(auth)/login');
+              }
+            },
           },
-        },
-      ]);
+        ]);
+      }
     } catch (e: any) {
       setMsg({
         kind: 'err',

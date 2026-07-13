@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, Pressable, View, Text } from 'react-native';
+import { Alert, Image, Pressable, View, Text, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/src/stores/auth';
@@ -41,21 +41,29 @@ export default function Login() {
       
       if (isUnverified) {
         const targetEmail = errData?.email || errData?.message?.email || email.trim().toLowerCase();
-        Alert.alert(
-          'Email Verification Required',
-          alertMsg || 'Please verify your email address to continue.',
-          [
-            {
-              text: 'Verify Now',
-              onPress: () => {
-                router.push({
-                  pathname: '/(auth)/verify',
-                  params: { email: targetEmail },
-                });
+        if (Platform.OS === 'web') {
+          alert('Email Verification Required: ' + (alertMsg || 'Please verify your email address to continue.'));
+          router.push({
+            pathname: '/(auth)/verify',
+            params: { email: targetEmail },
+          });
+        } else {
+          Alert.alert(
+            'Email Verification Required',
+            alertMsg || 'Please verify your email address to continue.',
+            [
+              {
+                text: 'Verify Now',
+                onPress: () => {
+                  router.push({
+                    pathname: '/(auth)/verify',
+                    params: { email: targetEmail },
+                  });
+                },
               },
-            },
-          ]
-        );
+            ]
+          );
+        }
         return;
       }
 
