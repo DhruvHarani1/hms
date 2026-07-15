@@ -54,19 +54,19 @@ export class MealsController {
   ) {}
 
   // ── Dish master lists + daily menu ──
-  @Roles('warden', 'staff')
+  @Roles('warden', 'staff', 'cook')
   @Get('dishes')
   listDishes(@CurrentUser() user: AuthUser, @Query('mealType') mealType: any) {
     return this.menu.listDishes(user.hostelId, mealType);
   }
 
-  @Roles('warden', 'staff')
+  @Roles('warden', 'staff', 'cook')
   @Post('dishes')
   addDish(@CurrentUser() user: AuthUser, @Body() dto: DishDto) {
     return this.menu.addDish(user.hostelId, dto.mealType, dto.name);
   }
 
-  @Roles('warden', 'staff')
+  @Roles('warden', 'staff', 'cook')
   @Patch('dishes/:id')
   updateDish(
     @CurrentUser() user: AuthUser,
@@ -76,13 +76,13 @@ export class MealsController {
     return this.menu.updateDish(user.hostelId, id, name);
   }
 
-  @Roles('warden', 'staff')
+  @Roles('warden', 'staff', 'cook')
   @Delete('dishes/:id')
   deleteDish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.menu.deleteDish(user.hostelId, id);
   }
 
-  @Roles('warden', 'staff')
+  @Roles('warden', 'staff', 'cook')
   @Post('menu')
   @HttpCode(200)
   setMenu(@CurrentUser() user: AuthUser, @Body() dto: SetMenuDto) {

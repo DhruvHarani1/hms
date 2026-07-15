@@ -41,6 +41,13 @@ export default function CookLayout() {
         }}
       />
       <Tabs.Screen
+        name="menu"
+        options={{
+          title: 'Menu',
+          tabBarIcon: icon('📋'),
+        }}
+      />
+      <Tabs.Screen
         name="account"
         options={{ title: 'Account', tabBarIcon: icon('👤') }}
       />
