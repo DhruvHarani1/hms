@@ -27,7 +27,7 @@ export class MealReviewService {
   async submitReview(hostelId: string, studentId: string, dto: CreateReviewDto) {
     const parsedDate = this.parseDateUTC(dto.date);
 
-    // 1. Verify the student was present for the meal they are trying to rate
+    // 1. Verify the student did not opt out of this meal
     const attendance = await this.prisma.mealAttendance.findUnique({
       where: {
         studentId_date_mealType: {
@@ -38,8 +38,8 @@ export class MealReviewService {
       },
     });
 
-    if (!attendance || attendance.status !== 'present') {
-      throw new BadRequestException('You can only rate meals that you ate (were present for).');
+    if (attendance && (attendance.status === 'opted_out' || attendance.status === 'absent')) {
+      throw new BadRequestException('You cannot rate a meal that you opted out of.');
     }
 
     // 2. Upsert the review

@@ -63,7 +63,8 @@ export class MealsService {
     marked: boolean,
   ) {
     const date = this.parseDate(dateStr);
-    if (marked) {
+    if (!marked) {
+      // Opt-out: create/upsert a record with status 'opted_out'
       await this.prisma.mealAttendance.upsert({
         where: {
           studentId_date_mealType: { studentId, date, mealType: meal },
@@ -73,12 +74,13 @@ export class MealsService {
           studentId,
           date,
           mealType: meal,
-          status: 'present',
+          status: 'opted_out',
           source: 'self',
         },
-        update: { status: 'present', markedAt: new Date() },
+        update: { status: 'opted_out', markedAt: new Date() },
       });
     } else {
+      // Opt-in (eating): delete the opt-out record
       await this.prisma.mealAttendance.deleteMany({
         where: { studentId, date, mealType: meal },
       });
@@ -98,7 +100,8 @@ export class MealsService {
     const { year, mon, start, end, days } = this.monthRange(month);
     const meals: Meal[] = meal === 'both' ? ['lunch', 'dinner'] : [meal];
 
-    if (marked) {
+    if (!marked) {
+      // Bulk opt-out: create opted_out rows for all dates
       const dates = this.allMonthDates(year, mon, days);
       const rows = dates.flatMap((date) =>
         meals.map((mealType) => ({
@@ -106,16 +109,16 @@ export class MealsService {
           studentId,
           date,
           mealType,
-          status: 'present' as const,
+          status: 'opted_out' as const,
           source: 'self' as const,
         })),
       );
-      // Unique (studentId,date,mealType) → skip existing.
       await this.prisma.mealAttendance.createMany({
         data: rows,
         skipDuplicates: true,
       });
     } else {
+      // Bulk opt-in: delete all opt-out rows
       await this.prisma.mealAttendance.deleteMany({
         where: {
           studentId,
@@ -131,36 +134,54 @@ export class MealsService {
 
   async monthData(studentId: string, month?: string) {
     const { start, end, days, label } = this.monthRange(month);
+
+    // 1. Pre-fill all dates of the month as present (true) by default
+    const map: Record<string, { lunch: boolean; dinner: boolean; breakfast: boolean }> = {};
+    const dates = this.allMonthDates(start.getUTCFullYear(), start.getUTCMonth(), days);
+    for (const d of dates) {
+      const k = this.dateKey(d);
+      map[k] = { lunch: true, dinner: true, breakfast: true };
+    }
+
+    // 2. Query any opt-out (absent/opted_out) records
     const rows = await this.prisma.mealAttendance.findMany({
       where: {
         studentId,
         mealType: { in: ['lunch', 'dinner'] },
-        status: 'present',
+        status: { in: ['absent', 'opted_out'] },
         date: { gte: start, lt: end },
       },
       select: { date: true, mealType: true },
     });
 
-    const map: Record<string, { lunch: boolean; dinner: boolean; breakfast: boolean }> =
-      {};
     for (const r of rows) {
       const k = this.dateKey(r.date);
-      if (!map[k]) map[k] = { lunch: false, dinner: false, breakfast: false };
-      if (r.mealType === 'lunch') map[k].lunch = true;
-      if (r.mealType === 'dinner') map[k].dinner = true;
+      if (map[k]) {
+        if (r.mealType === 'lunch') map[k].lunch = false;
+        if (r.mealType === 'dinner') map[k].dinner = false;
+      }
     }
-    // Breakfast is derived: on if lunch OR dinner.
+
+    // 3. Recalculate breakfast (derived: lunch || dinner)
     for (const k of Object.keys(map)) {
       map[k].breakfast = map[k].lunch || map[k].dinner;
     }
 
-    const daysAte = Object.keys(map).length;
+    // 4. Calculate stats based on days where they actually eat (present is true)
+    let daysAte = 0;
+    for (const k of Object.keys(map)) {
+      if (map[k].lunch || map[k].dinner) {
+        daysAte++;
+      }
+    }
+
+    const percentage = days > 0 ? Math.round((daysAte / days) * 100) : 0;
     return {
       month: label,
       daysInMonth: days,
       days: map,
       daysAte,
-      percentage: Math.round((daysAte / days) * 100),
+      percentage,
       summary: `Ate on ${daysAte} out of ${days} days.`,
     };
   }
@@ -199,16 +220,37 @@ export class MealsService {
 
   async ateTodayCount(hostelId: string) {
     const today = this.parseDate();
-    const rows = await this.prisma.mealAttendance.findMany({
+    const activeStudentCount = await this.prisma.user.count({
+      where: { hostelId, role: 'student', status: 'active', deletedAt: null },
+    });
+
+    // Count students who opted out of both lunch and dinner today
+    const optOuts = await this.prisma.mealAttendance.findMany({
       where: {
         hostelId,
-        mealType: { in: ['lunch', 'dinner'] },
-        status: 'present',
         date: today,
+        status: { in: ['absent', 'opted_out'] },
       },
-      select: { studentId: true },
+      select: { studentId: true, mealType: true },
     });
-    return new Set(rows.map((r) => r.studentId)).size;
+
+    const studentOptOuts: Record<string, { lunch: boolean; dinner: boolean }> = {};
+    for (const r of optOuts) {
+      if (!studentOptOuts[r.studentId]) {
+        studentOptOuts[r.studentId] = { lunch: false, dinner: false };
+      }
+      if (r.mealType === 'lunch') studentOptOuts[r.studentId].lunch = true;
+      if (r.mealType === 'dinner') studentOptOuts[r.studentId].dinner = true;
+    }
+
+    let absentTodayCount = 0;
+    for (const sid of Object.keys(studentOptOuts)) {
+      if (studentOptOuts[sid].lunch && studentOptOuts[sid].dinner) {
+        absentTodayCount++;
+      }
+    }
+
+    return Math.max(0, activeStudentCount - absentTodayCount);
   }
 
   /* ── Export data (all active students × days × meals) ─────────── */
@@ -222,24 +264,32 @@ export class MealsService {
       orderBy: { fullName: 'asc' },
     });
 
+    // studentId -> dayNumber -> {lunch,dinner}
+    const byStudent: Record<string, Record<number, { lunch: boolean; dinner: boolean }>> =
+      {};
+    for (const s of students) {
+      byStudent[s.id] = {};
+      for (let day = 1; day <= days; day++) {
+        byStudent[s.id][day] = { lunch: true, dinner: true };
+      }
+    }
+
     const rows = await this.prisma.mealAttendance.findMany({
       where: {
         hostelId,
         mealType: { in: ['lunch', 'dinner'] },
-        status: 'present',
+        status: { in: ['absent', 'opted_out'] },
         date: { gte: start, lt: end },
       },
       select: { studentId: true, date: true, mealType: true },
     });
 
-    // studentId -> dayNumber -> {lunch,dinner}
-    const byStudent: Record<string, Record<number, { lunch: boolean; dinner: boolean }>> =
-      {};
     for (const r of rows) {
       const day = r.date.getUTCDate();
-      (byStudent[r.studentId] ??= {})[day] ??= { lunch: false, dinner: false };
-      if (r.mealType === 'lunch') byStudent[r.studentId][day].lunch = true;
-      if (r.mealType === 'dinner') byStudent[r.studentId][day].dinner = true;
+      if (byStudent[r.studentId] && byStudent[r.studentId][day]) {
+        if (r.mealType === 'lunch') byStudent[r.studentId][day].lunch = false;
+        if (r.mealType === 'dinner') byStudent[r.studentId][day].dinner = false;
+      }
     }
 
     return {
