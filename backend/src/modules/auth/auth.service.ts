@@ -372,11 +372,14 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token expired or revoked');
     }
 
-    // Rotate: revoke the old, issue a new pair.
+    // Rotate: We comment out revoking the old refresh token immediately.
+    // This prevents concurrent requests from causing race conditions and logging users out on mobile.
+    /*
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
     });
+    */
 
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },

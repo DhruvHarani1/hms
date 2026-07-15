@@ -27,8 +27,12 @@ async function doRefresh(): Promise<string | null> {
     const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
     await tokenStore.save(res.data.accessToken, res.data.refreshToken);
     return res.data.accessToken as string;
-  } catch {
-    await tokenStore.clear();
+  } catch (error: any) {
+    // Only clear credentials if the server explicitly rejects the refresh token (401/403).
+    // Do NOT clear them on network timeouts, 502/503 server errors, or offline states.
+    if (error?.response && (error.response.status === 401 || error.response.status === 403)) {
+      await tokenStore.clear();
+    }
     return null;
   }
 }
