@@ -49,6 +49,11 @@ export default function WardenMore() {
         onPress={() => router.push('/(warden)/menu')}
       />
       <Button
+        title="⭐  Meal reviews"
+        variant="outline"
+        onPress={() => router.push('/(warden)/meal-reviews')}
+      />
+      <Button
         title="🍽️  Meal attendance"
         variant="outline"
         onPress={() => router.push('/(warden)/meal-students')}

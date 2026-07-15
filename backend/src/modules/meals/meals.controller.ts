@@ -24,7 +24,8 @@ import {
   CurrentUser,
   AuthUser,
 } from '../../common/decorators/current-user.decorator';
-import { BulkMealDto, MarkMealDto } from './dto/meals.dto';
+import { BulkMealDto, MarkMealDto, CreateReviewDto } from './dto/meals.dto';
+import { MealReviewService } from './meal-review.service';
 
 class DishDto {
   @IsIn(['breakfast', 'lunch', 'dinner'])
@@ -51,6 +52,7 @@ export class MealsController {
     private readonly exporter: MealExportService,
     private readonly menu: MealMenuService,
     private readonly jwt: JwtService,
+    private readonly reviewService: MealReviewService,
   ) {}
 
   // ── Dish master lists + daily menu ──
@@ -181,5 +183,36 @@ export class MealsController {
     );
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
     res.send(buffer);
+  }
+
+  // ── Meal Reviews ──
+  @Post('reviews')
+  @HttpCode(200)
+  submitReview(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateReviewDto,
+  ) {
+    return this.reviewService.submitReview(user.hostelId, user.userId, dto);
+  }
+
+  @Get('reviews/me')
+  getStudentReviews(
+    @CurrentUser() user: AuthUser,
+    @Query('dates') dates: string | string[],
+  ) {
+    const datesArr = Array.isArray(dates) ? dates : [dates];
+    return this.reviewService.getStudentReviewsForDates(user.userId, datesArr);
+  }
+
+  @Roles('warden', 'staff', 'cook')
+  @Get('reviews/stats')
+  getReviewStats(
+    @CurrentUser() user: AuthUser,
+    @Query('date') date: string,
+  ) {
+    if (!date) {
+      throw new BadRequestException('Date query parameter is required');
+    }
+    return this.reviewService.getReviewStats(user.hostelId, date);
   }
 }

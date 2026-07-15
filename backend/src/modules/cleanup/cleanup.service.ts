@@ -59,12 +59,16 @@ export class CleanupService {
       const chatMsgs = await this.prisma.message.deleteMany({
         where: { createdAt: { lt: this.daysAgo(30) } },
       });
+      // Meal reviews older than 30 days.
+      const mealReviews = await this.prisma.mealReview.deleteMany({
+        where: { createdAt: { lt: this.daysAgo(30) } },
+      });
 
       this.logger.log(
         `cleanup: mealNotif=${meals.count} oldNotif=${oldNotifs.count} ` +
           `complaints=${complaints.count} notices=${notices.count} ` +
           `resets=${resets.count} tokens=${tokens.count} sessions=${sessions.count} ` +
-          `usage=${usage.count} chatMsgs=${chatMsgs.count}`,
+          `usage=${usage.count} chatMsgs=${chatMsgs.count} mealReviews=${mealReviews.count}`,
       );
     } catch (e: any) {
       this.logger.error(`cleanup failed: ${e?.message ?? e}`);

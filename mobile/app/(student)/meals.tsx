@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View, TextInput } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Card, H1, Muted } from '@/src/components/ui';
@@ -34,6 +34,52 @@ export default function StudentMeals() {
   const selState = selected
     ? days[selected] ?? { lunch: false, dinner: false, breakfast: false }
     : { lunch: false, dinner: false, breakfast: false };
+
+  // Reviews logic
+  const todayObj = new Date();
+  const yesterdayObj = new Date();
+  yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+  const todayStr = todayObj.toISOString().slice(0, 10);
+  const yesterdayStr = yesterdayObj.toISOString().slice(0, 10);
+
+  const { data: myReviews, refetch: refetchMyReviews } = useQuery({
+    queryKey: ['my-reviews', todayStr, yesterdayStr],
+    queryFn: async () =>
+      (
+        await api.get('/meals/reviews/me', {
+          params: { dates: [todayStr, yesterdayStr] },
+        })
+      ).data,
+  });
+
+  const [activeReviewInput, setActiveReviewInput] = useState<{
+    date: string;
+    mealType: 'breakfast' | 'lunch' | 'dinner';
+    rating: number;
+  } | null>(null);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  async function submitReview() {
+    if (!activeReviewInput) return;
+    setSubmittingReview(true);
+    try {
+      await api.post('/meals/reviews', {
+        date: activeReviewInput.date,
+        mealType: activeReviewInput.mealType,
+        rating: activeReviewInput.rating,
+        comment: reviewComment,
+      });
+      setActiveReviewInput(null);
+      setReviewComment('');
+      refetchMyReviews();
+      Alert.alert('✅ Thank you!', 'Your review has been submitted.');
+    } catch (e: any) {
+      Alert.alert('Failed', e?.response?.data?.message ?? 'Could not submit review.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
 
   async function toggleMeal(meal: 'lunch' | 'dinner', next: boolean) {
     if (!selected) return;
@@ -95,6 +141,140 @@ export default function StudentMeals() {
           );
         })}
       </Card>
+
+      {/* Rate Recent Meals Card */}
+      {(() => {
+        const eligibleMeals: { dateStr: string; label: string; type: 'breakfast' | 'lunch' | 'dinner' }[] = [];
+        [
+          { dateStr: todayStr, label: 'Today' },
+          { dateStr: yesterdayStr, label: 'Yesterday' }
+        ].forEach(({ dateStr, label }) => {
+          const eaten = days[dateStr];
+          if (eaten) {
+            (['breakfast', 'lunch', 'dinner'] as const).forEach((m) => {
+              if (eaten[m]) {
+                eligibleMeals.push({ dateStr, label, type: m });
+              }
+            });
+          }
+        });
+
+        if (eligibleMeals.length === 0) return null;
+
+        return (
+          <Card style={{ gap: 10 }}>
+            <Text style={{ fontWeight: '800', color: colors.text }}>Rate Recent Meals</Text>
+            <Muted>Help us improve! Share your rating for meals you ate.</Muted>
+            <View style={{ gap: 12, marginTop: 4 }}>
+              {eligibleMeals.map(({ dateStr, label, type }) => {
+                const emoji = type === 'breakfast' ? '🍳' : type === 'lunch' ? '🍛' : '🌙';
+                const mealLabel = type.charAt(0).toUpperCase() + type.slice(1);
+                
+                // Check if already reviewed
+                const existing = myReviews?.find(
+                  (r: any) =>
+                    r.date.slice(0, 10) === dateStr && r.mealType === type
+                );
+
+                const isActiveInput =
+                  activeReviewInput?.date === dateStr &&
+                  activeReviewInput?.mealType === type;
+
+                return (
+                  <View key={`${dateStr}-${type}`} style={{ gap: 6, borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontWeight: '700', color: colors.text }}>
+                        {emoji} {mealLabel} ({label})
+                      </Text>
+                      {existing ? (
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#eab308' }}>
+                          {'★'.repeat(existing.rating) + '☆'.repeat(5 - existing.rating)}
+                        </Text>
+                      ) : (
+                        <View style={{ flexDirection: 'row', gap: 4 }}>
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const currentVal = isActiveInput ? activeReviewInput.rating : 0;
+                            return (
+                              <Pressable
+                                key={star}
+                                onPress={() => {
+                                  setActiveReviewInput({ date: dateStr, mealType: type, rating: star });
+                                }}
+                              >
+                                <Text style={{ fontSize: 18, color: star <= currentVal ? '#eab308' : colors.muted }}>
+                                  {star <= currentVal ? '★' : '☆'}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+
+                    {existing?.comment && (
+                      <Text style={{ fontSize: 13, fontStyle: 'italic', color: colors.muted, marginLeft: 6 }}>
+                        "{existing.comment}"
+                      </Text>
+                    )}
+
+                    {isActiveInput && (
+                      <View style={{ gap: 8, marginTop: 6, paddingLeft: 6 }}>
+                        <TextInput
+                          value={reviewComment}
+                          onChangeText={setReviewComment}
+                          placeholder="Optional: Tell us what you liked or disliked..."
+                          maxLength={150}
+                          style={{
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            borderRadius: radius.md,
+                            padding: 8,
+                            fontSize: 14,
+                            backgroundColor: '#fff',
+                          }}
+                        />
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Pressable
+                            onPress={() => {
+                              setActiveReviewInput(null);
+                              setReviewComment('');
+                            }}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 8,
+                              borderRadius: radius.md,
+                              borderWidth: 1,
+                              borderColor: colors.border,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ fontWeight: '700', color: colors.text }}>Cancel</Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={submitReview}
+                            disabled={submittingReview}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 8,
+                              borderRadius: radius.md,
+                              backgroundColor: colors.primary,
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ fontWeight: '700', color: '#fff' }}>
+                              {submittingReview ? 'Submitting...' : 'Submit'}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </Card>
+        );
+      })()}
 
       <Muted>Tap a day to set lunch/dinner. Breakfast turns on automatically.</Muted>
 

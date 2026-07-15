@@ -52,6 +52,7 @@ export default function CookLayout() {
         options={{ title: 'Account', tabBarIcon: icon('👤') }}
       />
       {/* Not in tab bar — reached via navigation */}
+      <Tabs.Screen name="meal-reviews" options={{ href: null }} />
       <Tabs.Screen name="chat" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>

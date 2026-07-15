@@ -136,6 +136,7 @@ model Hostel {
   leaves               LeaveRequest[]
   dishes               Dish[]
   conversations        Conversation[]
+  mealReviews          MealReview[]
 
   @@map("hostels")
 }
@@ -174,6 +175,7 @@ model User {
   createdConversations   Conversation[]           @relation("ConversationCreator")
   conversationMembers    ConversationMember[]
   sentMessages           Message[]                @relation("MessageSender")
+  mealReviews            MealReview[]
 
   @@index([hostelId])
   @@map("users")
@@ -391,6 +393,24 @@ model MealAttendance {
   @@unique([studentId, date, mealType])
   @@index([hostelId, date])
   @@map("meal_attendance")
+}
+
+model MealReview {
+  id        String   @id @default(uuid())
+  hostelId  String   @map("hostel_id")
+  studentId String   @map("student_id")
+  date      DateTime @db.Date
+  mealType  MealType @map("meal_type")
+  rating    Int
+  comment   String?  @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hostel  Hostel @relation(fields: [hostelId], references: [id])
+  student User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date, mealType])
+  @@index([hostelId, date])
+  @@map("meal_reviews")
 }
 
 // ─────────────────────────── Complaints ───────────────────────────
