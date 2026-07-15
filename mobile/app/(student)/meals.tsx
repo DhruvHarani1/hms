@@ -29,7 +29,10 @@ export default function StudentMeals() {
   });
 
   const days: DayMap = data?.days ?? {};
-  const marked = new Set<string>(Object.keys(days)); // day is "ate" if any meal
+  // Only highlight days where the student is eating lunch or dinner
+  const marked = new Set<string>(
+    Object.keys(days).filter((k) => days[k].lunch || days[k].dinner)
+  );
 
   const selState = selected
     ? days[selected] ?? { lunch: false, dinner: false, breakfast: false }
