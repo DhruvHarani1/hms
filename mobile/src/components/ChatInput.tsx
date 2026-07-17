@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, TextInput, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
+import { View, TextInput, Pressable, Text, ActivityIndicator, Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, radius } from '@/src/lib/theme';
 import { api } from '@/src/lib/api';
@@ -25,21 +25,9 @@ export function ChatInput({
     setSending(false);
   };
 
-  const handlePhoto = async () => {
-    if (sending) return;
-
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
-
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.5,
-    });
-    if (res.canceled || !res.assets?.length) return;
-
+  const uploadAndSendChatPhoto = async (asset: ImagePicker.ImagePickerAsset) => {
     setSending(true);
     try {
-      const asset = res.assets[0];
       const contentType = asset.mimeType || 'image/jpeg';
 
       // Get signed upload params from backend.
@@ -69,8 +57,61 @@ export function ChatInput({
 
       // Send image message with the Cloudinary key.
       await onSend(key, 'image');
-    } catch {}
-    setSending(false);
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Upload failed');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handlePhoto = async () => {
+    if (sending) return;
+
+    Alert.alert(
+      'Select Image Source',
+      'Choose how you want to upload the photo:',
+      [
+        {
+          text: 'Take Photo',
+          onPress: async () => {
+            const perm = await ImagePicker.requestCameraPermissionsAsync();
+            if (!perm.granted) {
+              Alert.alert('Permission Denied', 'Camera permission is required to capture photos.');
+              return;
+            }
+            const res = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              quality: 0.5,
+            });
+            if (!res.canceled && res.assets?.length) {
+              uploadAndSendChatPhoto(res.assets[0]);
+            }
+          },
+        },
+        {
+          text: 'Choose from Gallery',
+          onPress: async () => {
+            const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!perm.granted) {
+              Alert.alert('Permission Denied', 'Photo library permission is required to select photos.');
+              return;
+            }
+            const res = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              quality: 0.5,
+            });
+            if (!res.canceled && res.assets?.length) {
+              uploadAndSendChatPhoto(res.assets[0]);
+            }
+          },
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   return (

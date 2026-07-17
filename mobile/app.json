@@ -49,7 +49,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AIFDMS to access your photos to upload documents (Aadhaar, course proof, profile photo)."
+          "photosPermission": "Allow AIFDMS to access your photos to upload documents (Aadhaar, course proof, profile photo).",
+          "cameraPermission": "Allow AIFDMS to access your camera to capture photos for upload."
         }
       ],
       [
