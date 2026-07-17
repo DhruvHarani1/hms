@@ -176,6 +176,7 @@ model User {
   conversationMembers    ConversationMember[]
   sentMessages           Message[]                @relation("MessageSender")
   mealReviews            MealReview[]
+  complaintUpvotes       ComplaintUpvote[]
 
   @@index([hostelId])
   @@map("users")
@@ -447,6 +448,7 @@ model Complaint {
   category    ComplaintCategory?     @relation(fields: [categoryId], references: [id])
   replies     ComplaintReply[]
   attachments ComplaintAttachment[]
+  upvotes     ComplaintUpvote[]
 
   @@index([hostelId, status])
   @@index([studentId])
@@ -600,4 +602,18 @@ model EmailOtp {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("email_otps")
+}
+
+model ComplaintUpvote {
+  id          String   @id @default(uuid())
+  complaintId String   @map("complaint_id")
+  userId      String   @map("user_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([complaintId, userId])
+  @@index([userId])
+  @@map("complaint_upvotes")
 }

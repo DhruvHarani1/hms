@@ -67,9 +67,19 @@ export default function WardenComplaints() {
             </Text>
             <StatusPill status={item.status} />
           </View>
-          <Muted>
-            {item.student?.fullName} · {item.category?.name ?? 'General'}
-          </Muted>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flex: 1 }}>
+              <Muted>
+                By: {item.student?.fullName} · {item.category?.name ?? 'General'}
+              </Muted>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '11', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+              <Text style={{ fontSize: 12, color: colors.primary }}>▲</Text>
+              <Text style={{ fontWeight: '700', fontSize: 12, color: colors.primary }}>
+                {item.upvoteCount ?? 0}
+              </Text>
+            </View>
+          </View>
           <Text style={{ color: colors.text, marginTop: 4 }}>
             {item.description}
           </Text>

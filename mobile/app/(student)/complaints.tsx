@@ -54,6 +54,15 @@ export default function StudentComplaints() {
     }
   }
 
+  async function toggleUpvote(id: string) {
+    try {
+      await api.post(`/complaints/${id}/upvote`);
+      qc.invalidateQueries({ queryKey: ['my-complaints'] });
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message ?? 'Could not toggle upvote.');
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
@@ -61,7 +70,9 @@ export default function StudentComplaints() {
         data={complaints ?? []}
         keyExtractor={(item: any) => item.id}
         ListHeaderComponent={
-          <Button title="+ New complaint" onPress={() => setOpen(true)} />
+          <View style={{ marginBottom: 8 }}>
+            <Button title="+ New complaint" onPress={() => setOpen(true)} />
+          </View>
         }
         ListEmptyComponent={
           isLoading ? (
@@ -94,6 +105,28 @@ export default function StudentComplaints() {
             <Text style={{ color: colors.text, marginTop: 4 }}>
               {item.description}
             </Text>
+
+            <Pressable
+              onPress={() => toggleUpvote(item.id)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 10,
+                alignSelf: 'flex-start',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: item.hasUpvoted ? colors.primary : colors.border,
+                backgroundColor: item.hasUpvoted ? colors.primary + '11' : 'transparent',
+                gap: 6,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: item.hasUpvoted ? colors.primary : colors.muted }}>▲</Text>
+              <Text style={{ fontWeight: '600', fontSize: 13, color: item.hasUpvoted ? colors.primary : colors.text }}>
+                {item.hasUpvoted ? 'Upvoted' : 'Upvote'} ({item.upvoteCount ?? 0})
+              </Text>
+            </Pressable>
           </Card>
         )}
       />

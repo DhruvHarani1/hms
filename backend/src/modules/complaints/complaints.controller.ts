@@ -65,4 +65,9 @@ export class ComplaintsController {
   ) {
     return this.service.reply(user, id, dto);
   }
+
+  @Post('complaints/:id/upvote')
+  toggleUpvote(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.service.toggleUpvote(user, id);
+  }
 }
