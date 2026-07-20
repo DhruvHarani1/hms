@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Alert,
   ScrollView,
@@ -7,12 +7,13 @@ import {
   View,
   Pressable,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 export default function ExpenditureScreen() {
   const router = useRouter();
@@ -21,6 +22,18 @@ export default function ExpenditureScreen() {
   const [editMode, setEditMode] = useState(false);
   const [newLimitStr, setNewLimitStr] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        router.replace('/(student)');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [router])
+  );
 
   // Queries
   const { data: budget, isLoading, refetch } = useQuery({

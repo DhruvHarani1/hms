@@ -11,6 +11,7 @@ import {
 } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
 import { pickAndUpload, getFileUrl } from '@/src/lib/upload';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function StudentComplaints() {
   const qc = useQueryClient();
@@ -182,8 +183,12 @@ export default function StudentComplaints() {
         )}
       />
 
-      <Modal visible={open} animationType="slide">
-        <View style={{ flex: 1, backgroundColor: colors.bg, padding: 16, gap: 12 }}>
+      <Modal
+        visible={open}
+        animationType="slide"
+        onRequestClose={() => setOpen(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg, padding: 16, gap: 12 }}>
           <H1>New Complaint</H1>
           <Field label="Title" value={title} onChangeText={setTitle} />
           <Field
@@ -258,7 +263,7 @@ export default function StudentComplaints() {
             variant="outline"
             onPress={handleCancel}
           />
-        </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );

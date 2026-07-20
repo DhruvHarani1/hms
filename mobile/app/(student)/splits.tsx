@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Alert,
   FlatList,
@@ -10,6 +10,7 @@ import {
   View,
   Image,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
@@ -17,7 +18,8 @@ import { useAuth } from '@/src/stores/auth';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 import { pickAndUpload } from '@/src/lib/upload';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SplitsScreen() {
   const router = useRouter();
@@ -26,6 +28,22 @@ export default function SplitsScreen() {
 
   const [activeTab, setActiveTab] = useState<'balances' | 'history'>('balances');
   const [modalOpen, setModalOpen] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (modalOpen) {
+          setModalOpen(false);
+          return true;
+        }
+        router.replace('/(student)');
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [modalOpen, router])
+  );
 
   // Form State
   const [title, setTitle] = useState('');
@@ -593,8 +611,12 @@ export default function SplitsScreen() {
       </Pressable>
 
       {/* Add Split Modal */}
-      <Modal visible={modalOpen} animationType="slide">
-        <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Modal
+        visible={modalOpen}
+        animationType="slide"
+        onRequestClose={() => setModalOpen(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
           {/* Modal Header */}
           <View
             style={{
@@ -855,7 +877,7 @@ export default function SplitsScreen() {
               disabled={submitting}
             />
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
     </View>
   );
