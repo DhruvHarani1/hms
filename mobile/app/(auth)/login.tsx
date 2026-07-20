@@ -52,21 +52,10 @@ export default function Login() {
       if (isUnverified) {
         const targetEmail =
           errData?.email || errData?.message?.email || trimmedEmail;
-        showAlert(
-          'Email Verification Required',
-          alertMsg || 'Please verify your email address to continue.',
-          [
-            {
-              text: 'Verify Now',
-              onPress: () => {
-                router.push({
-                  pathname: '/(auth)/verify',
-                  params: { email: targetEmail },
-                });
-              },
-            },
-          ],
-        );
+        router.replace({
+          pathname: '/(auth)/verify',
+          params: { email: targetEmail },
+        });
         return;
       }
 

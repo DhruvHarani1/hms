@@ -49,27 +49,15 @@ export default function Register() {
       });
 
       if (res.data?.reapplied) {
-        setMsg({
-          kind: 'ok',
-          text: '✅ Request re-submitted. The warden will review it again.',
+        router.replace({
+          pathname: '/(auth)/verify',
+          params: { email: trimmedEmail },
         });
       } else {
-        // Redirect to verification screen
-        showAlert(
-          'Verification Required',
-          'A verification code was sent to your email. Please verify to complete your signup.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                router.replace({
-                  pathname: '/(auth)/verify',
-                  params: { email: trimmedEmail },
-                });
-              },
-            },
-          ],
-        );
+        router.replace({
+          pathname: '/(auth)/verify',
+          params: { email: trimmedEmail },
+        });
       }
     } catch (e: any) {
       setMsg({
