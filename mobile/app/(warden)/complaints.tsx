@@ -1,4 +1,4 @@
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, Text, View, Image } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Card, Muted } from '@/src/components/ui';
@@ -83,6 +83,19 @@ export default function WardenComplaints() {
           <Text style={{ color: colors.text, marginTop: 4 }}>
             {item.description}
           </Text>
+          {item.attachments && item.attachments.length > 0 && (
+            <Image
+              source={{ uri: item.attachments[0].fileUrl }}
+              style={{
+                width: '100%',
+                height: 180,
+                borderRadius: 8,
+                marginTop: 10,
+                backgroundColor: '#eee',
+              }}
+              resizeMode="cover"
+            />
+          )}
           {NEXT[item.status] ? (
             <Pressable
               onPress={() => advance(item.id, item.status)}

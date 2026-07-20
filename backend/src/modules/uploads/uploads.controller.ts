@@ -16,8 +16,8 @@ import {
 } from '../../common/decorators/current-user.decorator';
 
 class SignUploadDto {
-  @IsIn(['aadhaar', 'course_proof', 'photo'])
-  kind: 'aadhaar' | 'course_proof' | 'photo';
+  @IsIn(['aadhaar', 'course_proof', 'photo', 'complaint'])
+  kind: 'aadhaar' | 'course_proof' | 'photo' | 'complaint';
 
   @IsString()
   @IsNotEmpty()

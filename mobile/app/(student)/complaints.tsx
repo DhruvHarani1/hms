@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, Text, View, Modal } from 'react-native';
+import { Alert, FlatList, Pressable, Text, View, Modal, Image, ActivityIndicator } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
@@ -10,6 +10,7 @@ import {
   StatusPill,
 } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
+import { pickAndUpload, getFileUrl } from '@/src/lib/upload';
 
 export default function StudentComplaints() {
   const qc = useQueryClient();
@@ -18,6 +19,10 @@ export default function StudentComplaints() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+
+  const [photoKey, setPhotoKey] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const {
     data: complaints,
@@ -33,6 +38,22 @@ export default function StudentComplaints() {
     queryFn: async () => (await api.get('/complaint-categories')).data,
   });
 
+  async function handleAddPhoto() {
+    setUploadingPhoto(true);
+    try {
+      const key = await pickAndUpload('complaint');
+      if (key) {
+        setPhotoKey(key);
+        const url = await getFileUrl(key);
+        setPreviewUrl(url);
+      }
+    } catch (e: any) {
+      Alert.alert('Upload Error', e?.message ?? 'Failed to upload photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
   async function submit() {
     if (!title || !description) {
       Alert.alert('Missing', 'Add a title and description.');
@@ -40,10 +61,17 @@ export default function StudentComplaints() {
     }
     setBusy(true);
     try {
-      await api.post('/complaints', { title, description, categoryId });
+      await api.post('/complaints', {
+        title,
+        description,
+        categoryId,
+        attachments: photoKey ? [photoKey] : [],
+      });
       setTitle('');
       setDescription('');
       setCategoryId(undefined);
+      setPhotoKey(null);
+      setPreviewUrl(null);
       setOpen(false);
       qc.invalidateQueries({ queryKey: ['my-complaints'] });
       qc.invalidateQueries({ queryKey: ['student-dashboard'] });
@@ -52,6 +80,15 @@ export default function StudentComplaints() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleCancel() {
+    setTitle('');
+    setDescription('');
+    setCategoryId(undefined);
+    setPhotoKey(null);
+    setPreviewUrl(null);
+    setOpen(false);
   }
 
   async function toggleUpvote(id: string) {
@@ -105,6 +142,20 @@ export default function StudentComplaints() {
             <Text style={{ color: colors.text, marginTop: 4 }}>
               {item.description}
             </Text>
+
+            {item.attachments && item.attachments.length > 0 && (
+              <Image
+                source={{ uri: item.attachments[0].fileUrl }}
+                style={{
+                  width: '100%',
+                  height: 180,
+                  borderRadius: 8,
+                  marginTop: 10,
+                  backgroundColor: '#eee',
+                }}
+                resizeMode="cover"
+              />
+            )}
 
             <Pressable
               onPress={() => toggleUpvote(item.id)}
@@ -169,12 +220,43 @@ export default function StudentComplaints() {
               </Pressable>
             ))}
           </View>
+
+          <Muted>Photo Attachment</Muted>
+          {uploadingPhoto ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={{ color: colors.muted }}>Uploading photo...</Text>
+            </View>
+          ) : photoKey && previewUrl ? (
+            <View style={{ gap: 8 }}>
+              <Image
+                source={{ uri: previewUrl }}
+                style={{ width: '100%', height: 160, borderRadius: 8, backgroundColor: '#eee' }}
+                resizeMode="cover"
+              />
+              <Button
+                title="Remove Photo"
+                variant="outline"
+                onPress={() => {
+                  setPhotoKey(null);
+                  setPreviewUrl(null);
+                }}
+              />
+            </View>
+          ) : (
+            <Button
+              title="Attach Photo"
+              variant="outline"
+              onPress={handleAddPhoto}
+            />
+          )}
+
           <View style={{ flex: 1 }} />
-          <Button title="Submit" onPress={submit} loading={busy} />
+          <Button title="Submit" onPress={submit} loading={busy || uploadingPhoto} />
           <Button
             title="Cancel"
             variant="outline"
-            onPress={() => setOpen(false)}
+            onPress={handleCancel}
           />
         </View>
       </Modal>

@@ -12,6 +12,7 @@ import {
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class ComplaintsService {
@@ -19,6 +20,7 @@ export class ComplaintsService {
     private prisma: PrismaService,
     private mail: MailService,
     private notifications: NotificationsService,
+    private uploads: UploadsService,
   ) {}
 
   async categories(hostelId: string) {
@@ -92,6 +94,7 @@ export class ComplaintsService {
       include: {
         category: true,
         student: { select: { id: true, fullName: true, email: true } },
+        attachments: true,
         _count: { select: { replies: true, upvotes: true } },
         upvotes: {
           where: { userId: user.userId },
@@ -105,9 +108,14 @@ export class ComplaintsService {
     });
 
     return complaints.map((c) => {
-      const { upvotes, _count, ...rest } = c;
+      const { upvotes, _count, attachments, ...rest } = c;
+      const signedAttachments = attachments?.map((a) => ({
+        ...a,
+        fileUrl: this.uploads.signedViewUrl(a.fileUrl),
+      })) ?? [];
       return {
         ...rest,
+        attachments: signedAttachments,
         _count,
         upvoteCount: _count.upvotes,
         hasUpvoted: upvotes.length > 0,
@@ -135,9 +143,14 @@ export class ComplaintsService {
     });
     if (!complaint) throw new NotFoundException('Complaint not found');
 
-    const { upvotes, _count, ...rest } = complaint;
+    const { upvotes, _count, attachments, ...rest } = complaint;
+    const signedAttachments = attachments?.map((a) => ({
+      ...a,
+      fileUrl: this.uploads.signedViewUrl(a.fileUrl),
+    })) ?? [];
     return {
       ...rest,
+      attachments: signedAttachments,
       _count,
       upvoteCount: _count.upvotes,
       hasUpvoted: upvotes.length > 0,
