@@ -156,7 +156,6 @@ export default function SplitsScreen() {
     const totalAmount = parseFloat(amountStr);
     if (!title) return Alert.alert('Error', 'Please enter a title.');
     if (isNaN(totalAmount) || totalAmount <= 0) return Alert.alert('Error', 'Please enter a valid amount.');
-    if (selectedMembers.length === 0) return Alert.alert('Error', 'Select at least one member to split with.');
 
     // Calculate sum of shares
     const sumOfShares = Object.values(calculatedShares).reduce((a, b) => a + b, 0);
@@ -170,17 +169,19 @@ export default function SplitsScreen() {
 
     setSubmitting(false);
 
-    // Build participants DTO
-    const participantsDto = [
-      {
-        userId: currentUser?.id || '',
-        amount: splitType === 'EQUAL' ? undefined : parseFloat(customAmounts[currentUser?.id || '']) || 0,
-      },
-      ...selectedMembers.map((id) => ({
-        userId: id,
-        amount: splitType === 'EQUAL' ? undefined : parseFloat(customAmounts[id]) || 0,
-      })),
-    ];
+    // Build participants DTO (send empty array if personal expense)
+    const participantsDto = selectedMembers.length === 0
+      ? []
+      : [
+          {
+            userId: currentUser?.id || '',
+            amount: splitType === 'EQUAL' ? undefined : parseFloat(customAmounts[currentUser?.id || '']) || 0,
+          },
+          ...selectedMembers.map((id) => ({
+            userId: id,
+            amount: splitType === 'EQUAL' ? undefined : parseFloat(customAmounts[id]) || 0,
+          })),
+        ];
 
     setSubmitting(true);
     try {
@@ -607,7 +608,7 @@ export default function SplitsScreen() {
             }}
           >
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
-              Add Shared Expense
+              {selectedMembers.length === 0 ? 'Add Personal Expense' : 'Add Shared Expense'}
             </Text>
             <Pressable onPress={() => setModalOpen(false)}>
               <Text style={{ fontSize: 16, color: colors.primary, fontWeight: '700' }}>Cancel</Text>
@@ -810,29 +811,46 @@ export default function SplitsScreen() {
             )}
 
             {/* Calculations Preview */}
-            {parseFloat(amountStr) > 0 && selectedMembers.length > 0 && (
-              <Card style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', gap: 6 }}>
-                <Text style={{ fontWeight: '700', color: '#166534', fontSize: 13 }}>
-                  SPLIT PREVIEW SUMMARY:
-                </Text>
-                <Text style={{ fontSize: 12, color: '#166534' }}>
-                  • You pay: ₹{(calculatedShares[currentUser?.id || ''] || 0).toFixed(2)}{' '}
-                  {splitType === 'PERCENTAGE' && `(${customAmounts[currentUser?.id || ''] || 0}%)`}
-                </Text>
-                {selectedMembers.map((id) => {
-                  const m = members?.find((mb: any) => mb.id === id);
-                  return (
-                    <Text key={id} style={{ fontSize: 12, color: '#166534' }}>
-                      • {m?.fullName} owes: ₹{(calculatedShares[id] || 0).toFixed(2)}{' '}
-                      {splitType === 'PERCENTAGE' && `(${customAmounts[id] || 0}%)`}
-                    </Text>
-                  );
-                })}
-              </Card>
+            {parseFloat(amountStr) > 0 && (
+              selectedMembers.length > 0 ? (
+                <Card style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', gap: 6 }}>
+                  <Text style={{ fontWeight: '700', color: '#166534', fontSize: 13 }}>
+                    SPLIT PREVIEW SUMMARY:
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#166534' }}>
+                    • You pay: ₹{(calculatedShares[currentUser?.id || ''] || 0).toFixed(2)}{' '}
+                    {splitType === 'PERCENTAGE' && `(${customAmounts[currentUser?.id || ''] || 0}%)`}
+                  </Text>
+                  {selectedMembers.map((id) => {
+                    const m = members?.find((mb: any) => mb.id === id);
+                    return (
+                      <Text key={id} style={{ fontSize: 12, color: '#166534' }}>
+                        • {m?.fullName} owes: ₹{(calculatedShares[id] || 0).toFixed(2)}{' '}
+                        {splitType === 'PERCENTAGE' && `(${customAmounts[id] || 0}%)`}
+                      </Text>
+                    );
+                  })}
+                </Card>
+              ) : (
+                <Card style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe', gap: 4 }}>
+                  <Text style={{ fontWeight: '700', color: '#1e40af', fontSize: 13 }}>
+                    ℹ️ Personal Expense
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#1e40af' }}>
+                    No other participants selected. This will be tracked as your personal expense and count fully toward your monthly budget.
+                  </Text>
+                </Card>
+              )
             )}
 
             <Button
-              title={submitting ? 'Creating split...' : 'Log & Share Split'}
+              title={
+                submitting
+                  ? 'Saving expense...'
+                  : selectedMembers.length === 0
+                    ? 'Log Personal Expense'
+                    : 'Log & Share Split'
+              }
               onPress={handleCreateSplit}
               disabled={submitting}
             />

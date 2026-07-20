@@ -20,8 +20,24 @@ export class ExpensesService {
   ) {}
 
   async create(user: AuthUser, dto: CreateExpenseDto) {
-    if (dto.participants.length === 0) {
-      throw new BadRequestException('At least one participant is required.');
+    if (!dto.participants || dto.participants.length === 0) {
+      return this.prisma.expense.create({
+        data: {
+          hostelId: user.hostelId,
+          title: dto.title,
+          amount: dto.amount,
+          payerId: user.userId,
+          splitType: 'EQUAL',
+          receiptUrl: dto.receiptUrl || null,
+        },
+        include: {
+          splits: {
+            include: {
+              user: { select: { id: true, fullName: true } },
+            },
+          },
+        },
+      });
     }
 
     // 1. Calculate splits
