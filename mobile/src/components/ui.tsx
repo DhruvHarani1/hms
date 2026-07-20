@@ -7,6 +7,7 @@ import {
   TextInputProps,
   View,
   ViewStyle,
+  TextStyle,
 } from 'react-native';
 import { colors } from '@/src/lib/theme';
 
@@ -137,6 +138,16 @@ export function H1({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Muted({ children }: { children: React.ReactNode }) {
-  return <Text style={{ color: colors.muted }}>{children}</Text>;
+export function Muted({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: TextStyle;
+}) {
+  return (
+    <Text style={[{ color: colors.muted }, style]}>
+      {children}
+    </Text>
+  );
 }

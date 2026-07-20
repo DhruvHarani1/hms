@@ -19,6 +19,7 @@ import { CleanupModule } from './modules/cleanup/cleanup.module';
 import { UsageModule } from './modules/usage/usage.module';
 import { BirthdayModule } from './modules/birthday/birthday.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -43,6 +44,7 @@ import { HealthController } from './health.controller';
     UsageModule,
     BirthdayModule,
     ChatModule,
+    ExpensesModule,
   ],
   controllers: [HealthController],
 })

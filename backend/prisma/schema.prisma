@@ -137,6 +137,7 @@ model Hostel {
   dishes               Dish[]
   conversations        Conversation[]
   mealReviews          MealReview[]
+  expenses             Expense[]
 
   @@map("hostels")
 }
@@ -177,6 +178,9 @@ model User {
   sentMessages           Message[]                @relation("MessageSender")
   mealReviews            MealReview[]
   complaintUpvotes       ComplaintUpvote[]
+  paidExpenses           Expense[]                @relation("ExpensePayer")
+  expenseSplits          ExpenseSplit[]           @relation("ExpenseDebtor")
+  studentBudget          StudentBudget?
 
   @@index([hostelId])
   @@map("users")
@@ -616,4 +620,60 @@ model ComplaintUpvote {
   @@unique([complaintId, userId])
   @@index([userId])
   @@map("complaint_upvotes")
+}
+
+enum SplitType {
+  EQUAL
+  PERCENTAGE
+  CUSTOM
+}
+
+enum SettlementStatus {
+  UNPAID
+  PENDING
+  SETTLED
+}
+
+model Expense {
+  id          String         @id @default(uuid())
+  hostelId    String         @map("hostel_id")
+  title       String
+  amount      Float
+  payerId     String         @map("payer_id")
+  splitType   SplitType      @default(EQUAL) @map("split_type")
+  receiptUrl  String?        @map("receipt_url")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  hostel      Hostel         @relation(fields: [hostelId], references: [id])
+  payer       User           @relation("ExpensePayer", fields: [payerId], references: [id])
+  splits      ExpenseSplit[]
+
+  @@index([hostelId])
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id          String           @id @default(uuid())
+  expenseId   String           @map("expense_id")
+  userId      String           @map("user_id")
+  amount      Float
+  status      SettlementStatus @default(UNPAID)
+  settledAt   DateTime?        @map("settled_at")
+
+  expense     Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user        User      @relation("ExpenseDebtor", fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@map("expense_splits")
+}
+
+model StudentBudget {
+  id           String   @id @default(uuid())
+  userId       String   @unique @map("user_id")
+  monthlyLimit Float    @map("monthly_limit")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("student_budgets")
 }

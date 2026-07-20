@@ -1,4 +1,5 @@
-import { ScrollView, Text, View, RefreshControl } from 'react-native';
+import { ScrollView, Text, View, RefreshControl, Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
@@ -7,6 +8,7 @@ import { colors } from '@/src/lib/theme';
 
 export default function StudentHome() {
   const { user } = useAuth();
+  const router = useRouter();
   const { data, refetch, isRefetching } = useQuery({
     queryKey: ['student-dashboard'],
     queryFn: async () => (await api.get('/dashboard/student')).data,
@@ -73,6 +75,46 @@ export default function StudentHome() {
           <Muted>Open complaints</Muted>
         </Card>
       </View>
+
+      <Card style={{ gap: 10 }}>
+        <Text style={{ fontWeight: '800', fontSize: 18, color: colors.text }}>
+          💰 Money & Expenses
+        </Text>
+        <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
+          Split dining/room bills with peers and wardens, upload receipts, and monitor monthly spending budgets.
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+          <Pressable
+            onPress={() => router.push('/(student)/splits')}
+            style={{
+              flex: 1,
+              backgroundColor: colors.primary,
+              paddingVertical: 12,
+              borderRadius: 8,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              Bills & Splits
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/(student)/expenditure')}
+            style={{
+              flex: 1,
+              borderColor: colors.primary,
+              borderWidth: 1,
+              paddingVertical: 12,
+              borderRadius: 8,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
+              Budget & Spend
+            </Text>
+          </Pressable>
+        </View>
+      </Card>
 
       <H1>Latest Notices</H1>
       {(data?.latestNotices ?? []).length === 0 ? (

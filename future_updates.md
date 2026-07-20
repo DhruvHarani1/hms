@@ -1,49 +1,38 @@
 # 🚀 Future Updates & Feature Roadmap — AIFDMS Hostel App
 
-Here is a curated list of high-value, PG-focused feature ideas for future updates to delight students, wardens, and staff.
+Here is a specialized set of features focused on **PG Expenditure Calculation and Bill Splitting Functionality**.
 
 ---
 
-## 🧺 1. Smart Laundry Scheduler
-* **What**: A slot-booking system for shared PG washing machines and dryers.
-* **Why**: Prevents queues and conflicts over who gets to use the laundry room.
-* **Features**:
-  * Real-time slot availability viewer.
-  * Slot reservations (e.g., maximum 2 hours per slot).
-  * Auto push notification when the cycle is finished (tracked via user-reported timer).
+## 💰 PG Expense Tracking & Bill Splitting Roadmap
 
-## 🎫 2. Digital Gate Pass & QR Security
-* **What**: Self-generated late entry, night-out, or visitor gate passes.
-* **Why**: Eliminates manual paper register logs at the entrance.
+### 1. Roommate Expense Splitter (Peer-to-Peer)
+* **What**: A shared ledger for roommates sharing a PG room.
+* **Why**: Roommates frequently purchase shared items (cleaning supplies, room decorations, snacks, or water cans) and need an easy way to track who owes what.
 * **Features**:
-  * Students request a gate pass in-app.
-  * Wardens approve/reject the request with one tap.
-  * Generates a temporary QR code that security guards can scan to log check-in/out timestamps.
+  * **Add Expense**: Log an expense, choose who paid, and select who is splitting it (Equally, by Percentage, or Custom Amount).
+  * **Bill Uploads**: Attach a photo of the purchase receipt.
+  * **Debt Settlement**: Visual checklist of balance summaries (e.g., *"Raj owes you ₹150"*). Tap "Settle Up" to log cash/UPI settlements.
 
-## 🤝 3. P2P Hostel Marketplace (Buy/Sell/Borrow)
-* **What**: A closed marketplace for the hostel residents.
-* **Why**: Students frequently need to borrow or purchase items from seniors or peers.
+### 2. Hostel-Wide Event/Party Splits
+* **What**: Crowd-sourced expense splitter for hostel events.
+* **Why**: Students often host group activities like Biryani parties, Holi celebrations, movie nights, or sports tournaments and need to split costs among the participants.
 * **Features**:
-  * Post items for sale or borrow (e.g., textbooks, study lamps, monitors, cycles, kettles).
-  * Room-to-room delivery coordinates and in-app chat.
+  * **Event Ledger**: Organizer creates an event (e.g., "Sunday Night Biryani Party") and logs all purchases (rice, meat, spices).
+  * **Opt-In List**: Students toggle "Join Event" to add themselves to the split list.
+  * **Automated Calculations**: Calculates the per-person contribution and lets participants clear their share to the organizer.
 
-## 👥 4. Roommate Expense Splitter
-* **What**: Shared ledger for roommates sharing PG rooms.
-* **Why**: Keeps track of mutual PG room expenses (groceries, cleaning supplies, room decoration).
+### 3. Room-Level Utility & Electricity Splits
+* **What**: Warden-administered room utility bill calculator.
+* **Why**: Many PGs bill electricity or AC usage separately per room. The cost must be dynamically calculated and split equally among the occupants of that room.
 * **Features**:
-  * Log shared bills.
-  * Automatic split calculation and settlement logs.
+  * **Meter Log**: Warden inputs the room's starting and ending meter readings for the month.
+  * **Auto-Split**: The system calculates the total cost (based on PG unit rates) and splits it equally among the registered roommates in that room.
+  * **PG Ledger Link**: Adds the split amount directly to each student's monthly PG invoice ledger.
 
-## 📞 5. Automated Parent Outing Consent
-* **What**: Integration with parental notifications.
-* **Why**: Hostel safety guidelines require parental consent before a warden approves weekend leaves.
+### 4. Student Monthly Expenditure Tracker
+* **What**: Personal spending analyzer for students.
+* **Why**: Helps students manage their monthly allowance.
 * **Features**:
-  * When a student requests a "Night Out" leave, the system sends an automatic SMS/Email verification link to their parents.
-  * Once the parent taps "Approve", the warden receives an alert showing parent consent is granted.
-
-## 💡 6. QR-Code "Tap & Report" Maintenance
-* **What**: Scanning physical QR codes placed on appliances/locations to report issues.
-* **Why**: Makes filing complaints extremely fast and eliminates typing details.
-* **Features**:
-  * Print QR codes for specific rooms/hallways/appliances (e.g. "Ground floor water filter").
-  * Student scans the QR code, opening a pre-filled complaint form with category, location, and title automatically populated.
+  * **Expense Breakdown**: Visual charts showing spending categories (Rent, Dining Extras, Roommate Splits, Event contributions).
+  * **Budget Alerts**: Set a monthly spending limit and get alert notifications if expenses exceed the budget limit.
