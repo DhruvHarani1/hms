@@ -25,6 +25,7 @@ export default function StudentLayout() {
   );
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.card },

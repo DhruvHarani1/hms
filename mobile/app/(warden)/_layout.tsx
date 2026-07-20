@@ -34,6 +34,7 @@ export default function WardenLayout() {
   const pendingCount = (requests ?? []).length;
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.card },
