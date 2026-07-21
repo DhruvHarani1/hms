@@ -1,0 +1,53 @@
+/* ─── CTA Section ─── */
+.cta {
+  padding: 120px 0;
+  text-align: center;
+}
+
+.cta__box {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(6, 182, 212, 0.06));
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 32px;
+  padding: 72px 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta__box::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.cta__title {
+  font-size: clamp(28px, 4.5vw, 44px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 18px;
+  position: relative;
+}
+
+.cta__desc {
+  font-size: 17px;
+  color: var(--muted);
+  max-width: 500px;
+  margin: 0 auto 40px;
+  line-height: 1.7;
+  position: relative;
+}
+
+.cta__box .btn {
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .cta__box {
+    padding: 48px 24px;
+  }
+}

@@ -1,0 +1,58 @@
+/* ─── Footer ─── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 0;
+}
+
+.footer__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.footer__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer__logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.footer__name {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.footer__copy {
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+.footer__links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer__link {
+  font-size: 13px;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.footer__link:hover {
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .footer__inner {
+    flex-direction: column;
+    text-align: center;
+  }
+}

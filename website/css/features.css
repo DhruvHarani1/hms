@@ -1,0 +1,136 @@
+/* ─── Features Grid ─── */
+.features__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 56px;
+}
+
+.feat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feat::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+.feat::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(99, 102, 241, 0.04), transparent 50%);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+.feat:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.feat:hover::before {
+  opacity: 1;
+}
+
+.feat:hover::after {
+  opacity: 1;
+}
+
+.feat__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.feat__title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.feat__desc {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── Stats Banner ─── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  padding: 80px 0;
+}
+
+.stats__card {
+  text-align: center;
+  padding: 32px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.3s;
+}
+
+.stats__card:hover {
+  border-color: var(--border-hover);
+}
+
+.stats__num {
+  font-size: 36px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.stats__num--purple { color: var(--primary-light); }
+.stats__num--cyan { color: var(--accent); }
+.stats__num--green { color: var(--green); }
+.stats__num--amber { color: var(--amber); }
+
+.stats__label {
+  font-size: 13px;
+  color: var(--muted-2);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .features__grid {
+    grid-template-columns: 1fr;
+  }
+}

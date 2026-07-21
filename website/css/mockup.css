@@ -1,0 +1,219 @@
+/* ─── Interactive Phone Mockup Section ─── */
+.mockup-section {
+  padding: 60px 0 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+
+.mockup-container {
+  perspective: 1200px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.phone-frame {
+  width: 320px;
+  height: 640px;
+  border-radius: 44px;
+  background: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  border: 3px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8), 0 0 80px rgba(99, 102, 241, 0.25);
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.phone-notch {
+  width: 130px;
+  height: 28px;
+  background: #050816;
+  border-radius: 0 0 18px 18px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.phone-camera {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1e293b;
+  border: 2px solid #0f172a;
+}
+
+.phone-speaker {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: #1e293b;
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 34px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #090d16 0%, #1e1b4b 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 44px 16px 16px;
+  gap: 14px;
+  position: relative;
+}
+
+/* App Header Inside Phone */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+}
+
+.app-greeting {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.app-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.app-badge {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--primary-light);
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* App Cards Inside Phone */
+.app-card {
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.app-card-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green);
+}
+
+.app-card-pill.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--amber);
+}
+
+.app-card-body {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.app-card-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.app-btn {
+  background: var(--primary);
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Bottom Tab Bar Inside Phone */
+.app-tabs {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 8px 12px;
+}
+
+.app-tab {
+  font-size: 18px;
+  opacity: 0.4;
+  transition: opacity 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.app-tab.active {
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+@media (max-width: 480px) {
+  .phone-frame {
+    width: 270px;
+    height: 540px;
+  }
+}

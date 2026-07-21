@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIFDMS — The Official Hostel Management App</title>
+  <meta name="description" content="Download the AIFDMS Hostel Management mobile app. Manage meals, split bills, file complaints, chat, and stay updated with real-time push alerts.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/reset.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/nav.css">
+  <link rel="stylesheet" href="/css/hero.css">
+  <link rel="stylesheet" href="/css/mockup.css">
+  <link rel="stylesheet" href="/css/features.css">
+  <link rel="stylesheet" href="/css/roles.css">
+  <link rel="stylesheet" href="/css/steps.css">
+  <link rel="stylesheet" href="/css/faq.css">
+  <link rel="stylesheet" href="/css/cta.css">
+  <link rel="stylesheet" href="/css/footer.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/logo.jpg" type="image/jpeg">
+</head>
+<body>
+
+  <!-- Ambient Background -->
+  <div class="bg-grid"></div>
+  <div class="orb orb--1"></div>
+  <div class="orb orb--2"></div>
+  <div class="orb orb--3"></div>
+
+  <!-- ───────────────────── NAV ───────────────────── -->
+  <nav class="nav" id="nav">
+    <div class="container nav__inner">
+      <a href="#" class="nav__logo">
+        <img src="/assets/logo.jpg" alt="AIFDMS" class="nav__logo-img">
+        AIFDMS
+      </a>
+      <div class="nav__links">
+        <a href="#features" class="nav__link">Features</a>
+        <a href="#roles" class="nav__link">Who It's For</a>
+        <a href="#install" class="nav__link">Install</a>
+        <a href="#faq" class="nav__link">FAQ</a>
+      </div>
+      <a href="https://expo.dev/artifacts/eas/RzMNNDiymDBau__PUuT4uJKbnzXGm6asCzOdtucanMs.apk" class="nav__cta" id="nav-download">
+        Download APK
+      </a>
+      <div class="nav__hamburger" id="hamburger">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ───────────────────── HERO ───────────────────── -->
+  <section class="hero" id="hero">
+    <div class="container hero__content">
+
+      <h1 class="hero__title">
+        Your Hostel,<br>
+        <span class="gradient">One App Away</span>
+      </h1>
+
+      <p class="hero__sub">
+        AIFDMS is the all-in-one mobile platform for hostel residents, wardens, and kitchen staff.
+        Meals, bills, complaints, attendance — managed effortlessly.
+      </p>
+
+      <div class="hero__cta">
+        <a href="https://expo.dev/artifacts/eas/RzMNNDiymDBau__PUuT4uJKbnzXGm6asCzOdtucanMs.apk" class="btn btn--primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for Android
+        </a>
+        <a href="#features" class="btn btn--secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Explore Features
+        </a>
+      </div>
+
+      <div class="hero__stats">
+        <div class="hero__stat">
+          <div class="hero__stat-val" id="version-badge">v1.0.0</div>
+          <div class="hero__stat-label">Latest Version</div>
+        </div>
+        <div class="hero__stat">
+          <div class="hero__stat-val">Android</div>
+          <div class="hero__stat-label">Platform</div>
+        </div>
+        <div class="hero__stat">
+          <div class="hero__stat-val">Free</div>
+          <div class="hero__stat-label">No Charges</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero__scroll">
+      <span class="hero__scroll-text">Scroll</span>
+      <div class="hero__scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── PHONE MOCKUP ───────────────────── -->
+  <section class="mockup-section" id="mockup">
+    <div class="mockup-container">
+      <div class="phone-frame" id="phone-frame">
+        <div class="phone-notch">
+          <div class="phone-speaker"></div>
+          <div class="phone-camera"></div>
+        </div>
+        <div class="phone-screen">
+          <div class="app-header">
+            <div class="app-user">
+              <div class="app-avatar">R</div>
+              <div>
+                <div class="app-greeting">Good Morning 👋</div>
+                <div class="app-name">Rahul Sharma</div>
+              </div>
+            </div>
+            <div class="app-badge">Room 302</div>
+          </div>
+
+          <div class="app-card">
+            <div class="app-card-head">
+              <div class="app-card-title">🍽️ Today's Lunch</div>
+              <div class="app-card-pill">Served 1:00 PM</div>
+            </div>
+            <div class="app-card-body">Dal Makhani, Shahi Paneer, Roti &amp; Rice</div>
+            <div class="app-btn">✓ Attending</div>
+          </div>
+
+          <div class="app-card">
+            <div class="app-card-head">
+              <div class="app-card-title">💸 Active Bill Split</div>
+              <div class="app-card-pill pending">Pending</div>
+            </div>
+            <div class="app-card-body">Sunday Dinner Party • You owe Raj</div>
+            <div class="app-card-val">₹180.00</div>
+          </div>
+
+          <div class="app-card">
+            <div class="app-card-head">
+              <div class="app-card-title">📝 Maintenance Issue</div>
+              <div class="app-card-pill">In Progress</div>
+            </div>
+            <div class="app-card-body">Leaking Bathroom Tap #104</div>
+          </div>
+
+          <div class="app-tabs">
+            <span class="app-tab active">🏠</span>
+            <span class="app-tab">🍽️</span>
+            <span class="app-tab">💸</span>
+            <span class="app-tab">⚙️</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── STATS ───────────────────── -->
+  <section class="container stats">
+    <div class="stats__card">
+      <div class="stats__num stats__num--purple" data-count="6">0</div>
+      <div class="stats__label">Core Modules</div>
+    </div>
+    <div class="stats__card">
+      <div class="stats__num stats__num--cyan" data-count="3">0</div>
+      <div class="stats__label">User Roles</div>
+    </div>
+    <div class="stats__card">
+      <div class="stats__num stats__num--green">Real-time</div>
+      <div class="stats__label">Push Notifications</div>
+    </div>
+    <div class="stats__card">
+      <div class="stats__num stats__num--amber">100%</div>
+      <div class="stats__label">Free &amp; Open</div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── FEATURES ───────────────────── -->
+  <section class="section" id="features">
+    <div class="container">
+      <div class="section-label">⚡ Features</div>
+      <h2 class="section-title">Everything Your Hostel Needs</h2>
+      <p class="section-desc">
+        From daily meals to monthly expense settlements — AIFDMS replaces paper registers, WhatsApp groups, and manual tracking with one beautiful app.
+      </p>
+
+      <div class="features__grid">
+        <div class="feat">
+          <div class="feat__icon">🍽️</div>
+          <div class="feat__title">Smart Meal System</div>
+          <div class="feat__desc">Mark daily meal attendance, view weekly menus set by the warden, and rate food quality to give direct feedback to the kitchen.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">💸</div>
+          <div class="feat__title">Bill Splitting</div>
+          <div class="feat__desc">Split dinner bills, grocery runs, or any group expense equally, by percentage, or custom amounts with double-shake settlement verification.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">📷</div>
+          <div class="feat__title">Photo Complaints</div>
+          <div class="feat__desc">Snap a photo of broken fixtures, leaking taps, or dirty common areas. Track resolution status with live warden updates.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">📢</div>
+          <div class="feat__title">Push Notifications</div>
+          <div class="feat__desc">Receive instant alerts for warden notices, leave approvals, meal schedule changes, birthday wishes, and emergency announcements.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">📋</div>
+          <div class="feat__title">Attendance Tracking</div>
+          <div class="feat__desc">Wardens mark daily hostel attendance, generate weekly/monthly reports, and monitor student presence patterns over time.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">💬</div>
+          <div class="feat__title">In-App Chat</div>
+          <div class="feat__desc">Students and wardens communicate through private messaging channels. Share images, documents, and updates without sharing personal numbers.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">🏖️</div>
+          <div class="feat__title">Leave Management</div>
+          <div class="feat__desc">Students submit leave requests digitally with reason and dates. Wardens approve or decline with a single tap and optional notes.</div>
+        </div>
+
+        <div class="feat">
+          <div class="feat__icon">📊</div>
+          <div class="feat__title">Budget Tracker</div>
+          <div class="feat__desc">Set a monthly spending limit and track personal and shared expenses with visual progress meters, pie charts, and analytics.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── ROLES ───────────────────── -->
+  <section class="section" id="roles">
+    <div class="container">
+      <div class="section-label">👤 Who It's For</div>
+      <h2 class="section-title">Built for Every Role</h2>
+      <p class="section-desc">
+        Whether you're a student, warden, or cook — AIFDMS gives you the tools you need with a dedicated dashboard for each role.
+      </p>
+
+      <div class="roles__grid">
+        <div class="role">
+          <div class="role__emoji">🎓</div>
+          <div class="role__title">Student</div>
+          <div class="role__subtitle">The daily resident experience</div>
+          <div class="role__list">
+            <div class="role__item"><div class="role__item-dot"></div>Mark meal attendance &amp; rate food</div>
+            <div class="role__item"><div class="role__item-dot"></div>Split bills with roommates</div>
+            <div class="role__item"><div class="role__item-dot"></div>File complaints with photo proof</div>
+            <div class="role__item"><div class="role__item-dot"></div>Track personal &amp; shared budgets</div>
+            <div class="role__item"><div class="role__item-dot"></div>Submit leave requests</div>
+            <div class="role__item"><div class="role__item-dot"></div>Chat privately with warden</div>
+          </div>
+        </div>
+
+        <div class="role">
+          <div class="role__emoji">🛡️</div>
+          <div class="role__title">Warden</div>
+          <div class="role__subtitle">Complete management control</div>
+          <div class="role__list">
+            <div class="role__item"><div class="role__item-dot"></div>Approve new student registrations</div>
+            <div class="role__item"><div class="role__item-dot"></div>Set daily &amp; weekly meal menus</div>
+            <div class="role__item"><div class="role__item-dot"></div>Mark hostel &amp; meal attendance</div>
+            <div class="role__item"><div class="role__item-dot"></div>Resolve complaints with updates</div>
+            <div class="role__item"><div class="role__item-dot"></div>Post notices &amp; announcements</div>
+            <div class="role__item"><div class="role__item-dot"></div>Approve / decline leave requests</div>
+          </div>
+        </div>
+
+        <div class="role">
+          <div class="role__emoji">👨‍🍳</div>
+          <div class="role__title">Cook</div>
+          <div class="role__subtitle">Kitchen workflow simplified</div>
+          <div class="role__list">
+            <div class="role__item"><div class="role__item-dot"></div>View assigned daily menu</div>
+            <div class="role__item"><div class="role__item-dot"></div>See meal attendance headcount</div>
+            <div class="role__item"><div class="role__item-dot"></div>Read student food reviews</div>
+            <div class="role__item"><div class="role__item-dot"></div>Chat with warden for coordination</div>
+            <div class="role__item"><div class="role__item-dot"></div>Receive push notification alerts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── INSTALL STEPS ───────────────────── -->
+  <section class="section" id="install">
+    <div class="container">
+      <div class="section-label">📲 Installation</div>
+      <h2 class="section-title">Up &amp; Running in 3 Steps</h2>
+      <p class="section-desc">
+        No Play Store needed. Download and install directly from this page in under a minute.
+      </p>
+
+      <div class="steps__track">
+        <div class="step">
+          <div class="step__num">1</div>
+          <div class="step__title">Download the APK</div>
+          <div class="step__desc">Tap the <strong>"Download for Android"</strong> button. The APK file will be saved to your phone's Downloads folder.</div>
+        </div>
+
+        <div class="step">
+          <div class="step__num">2</div>
+          <div class="step__title">Allow Installation</div>
+          <div class="step__desc">Open the downloaded file. If prompted, tap <strong>Settings → Allow from this source</strong>, then tap <strong>Install</strong>.</div>
+        </div>
+
+        <div class="step">
+          <div class="step__num">3</div>
+          <div class="step__title">Sign In &amp; Go</div>
+          <div class="step__desc">Launch the app, register with your hostel email, verify your account, and you're all set!</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── FAQ ───────────────────── -->
+  <section class="section" id="faq">
+    <div class="container">
+      <div class="section-label">❓ FAQ</div>
+      <h2 class="section-title">Frequently Asked Questions</h2>
+
+      <div class="faq__list">
+        <div class="faq__item">
+          <button class="faq__question">
+            Is the app completely free?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">Yes! AIFDMS is 100% free for all hostel residents, wardens, and staff. There are no hidden charges, subscriptions, or premium tiers.</div></div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question">
+            Does it work offline?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">The app requires an internet connection for most features since data syncs with the server in real-time. Cached screens remain viewable offline.</div></div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question">
+            How do I update to the latest version?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">The app checks for updates on every launch. If a new mandatory version is released, you'll see an "Update Required" screen with a download button. Most updates are delivered over-the-air automatically.</div></div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question">
+            Is my data secure?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">All communication uses HTTPS encryption. Passwords are hashed with bcrypt, and authentication uses secure JWT tokens. Your personal data is never shared with third parties.</div></div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question">
+            Can the warden see my personal expenses?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">No. Personal expenses and bill splits are completely private between the participants. Wardens can only see shared expenses where they are included as a participant.</div></div>
+        </div>
+
+        <div class="faq__item">
+          <button class="faq__question">
+            Who built this app?
+            <svg class="faq__chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="faq__answer"><div class="faq__answer-inner">AIFDMS was built as a student project to solve real problems faced in hostel living. It's designed by students, for students — with direct input from wardens and kitchen staff.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── CTA ───────────────────── -->
+  <section class="cta" id="download">
+    <div class="container">
+      <div class="cta__box">
+        <h2 class="cta__title">Ready to Simplify Hostel Life?</h2>
+        <p class="cta__desc">Join your fellow residents. Download the AIFDMS app now and leave the chaos of manual tracking behind.</p>
+        <a href="https://expo.dev/artifacts/eas/RzMNNDiymDBau__PUuT4uJKbnzXGm6asCzOdtucanMs.apk" class="btn btn--primary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for Android
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────── FOOTER ───────────────────── -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <img src="/assets/logo.jpg" alt="AIFDMS" class="footer__logo">
+        <span class="footer__name">AIFDMS Hostel Management</span>
+      </div>
+      <div class="footer__copy">&copy; 2026 All rights reserved. Built by students, for students.</div>
+      <div class="footer__links">
+        <a href="#features" class="footer__link">Features</a>
+        <a href="#roles" class="footer__link">Roles</a>
+        <a href="#install" class="footer__link">Install</a>
+        <a href="#faq" class="footer__link">FAQ</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
