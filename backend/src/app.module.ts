@@ -21,6 +21,7 @@ import { BirthdayModule } from './modules/birthday/birthday.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { HealthController } from './health.controller';
+import { DownloadController } from './download.controller';
 
 @Module({
   imports: [
@@ -46,6 +47,6 @@ import { HealthController } from './health.controller';
     ChatModule,
     ExpensesModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, DownloadController],
 })
 export class AppModule {}
