@@ -1,9 +1,11 @@
 import { Controller, Get, Header, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { Public } from './common/decorators/public.decorator';
 
 const APK_URL =
   'https://expo.dev/artifacts/eas/RzMNNDiymDBau__PUuT4uJKbnzXGm6asCzOdtucanMs.apk';
 
+@Public()
 @Controller('download')
 export class DownloadController {
   @Get('version')
