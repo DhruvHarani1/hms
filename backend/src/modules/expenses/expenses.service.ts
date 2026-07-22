@@ -433,7 +433,7 @@ export class ExpensesService {
   }
 
   async getMembers(user: AuthUser) {
-    const members = await this.prisma.user.findMany({
+    return this.prisma.user.findMany({
       where: {
         hostelId: user.hostelId,
         role: { in: ['student', 'warden', 'staff'] as any },
