@@ -1,83 +1,95 @@
 import { useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/lib/api';
-import { Card, Field, Muted } from '@/src/components/ui';
-import {
-  EmptyState,
-  ErrorState,
-  SkeletonList,
-} from '@/src/components/primitives';
-import { colors } from '@/src/lib/theme';
+import { Card, Muted } from '@/src/components/ui';
+import { EmptyState } from '@/src/components/primitives';
+import { colors, radius } from '@/src/lib/theme';
+import { formatStudentName } from '@/src/lib/formatName';
 
 export default function WardenStudents() {
   const router = useRouter();
   const [q, setQ] = useState('');
-  const { data, isLoading, isError, refetch } = useQuery({
+
+  const { data, isLoading } = useQuery({
     queryKey: ['students', q],
     queryFn: async () =>
-      (await api.get('/students', { params: q ? { q } : {} })).data,
+      (await api.get('/students', { params: { q: q || undefined } })).data,
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <View style={{ padding: 16 }}>
-        <Field
-          placeholder="Search students…"
-          value={q}
-          onChangeText={setQ}
-          autoCapitalize="none"
-        />
-      </View>
-      {isLoading ? (
-        <SkeletonList count={5} />
-      ) : isError ? (
-        <ErrorState onRetry={refetch} />
-      ) : (
-      <FlatList
-        contentContainerStyle={{ padding: 16, paddingTop: 0, gap: 10, flexGrow: 1 }}
-        data={data ?? []}
-        keyExtractor={(item: any) => item.id}
-        ListEmptyComponent={
-          <EmptyState
-            emoji="🔍"
-            title={q ? 'No matches' : 'No students yet'}
-            subtitle={q ? 'Try a different search.' : undefined}
-          />
-        }
-        renderItem={({ item }: { item: any }) => (
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/(warden)/student-profile',
-                params: { id: item.id, name: item.fullName },
-              })
-            }
-          >
-            <Card
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <View>
-                <Text style={{ fontWeight: '700', color: colors.text }}>
-                  {item.fullName}
-                </Text>
-                <Muted>
-                  {item.email}
-                  {item.studentProfile?.roomNumber
-                    ? ` · Room ${item.studentProfile.roomNumber}`
-                    : ''}
-                </Muted>
-              </View>
-              <Text style={{ fontSize: 20, color: colors.muted }}>›</Text>
-            </Card>
-          </Pressable>
-        )}
+    <View style={{ flex: 1, backgroundColor: colors.bg, padding: 16, gap: 12 }}>
+      <TextInput
+        placeholder="Search by name or email..."
+        placeholderTextColor={colors.muted}
+        value={q}
+        onChangeText={setQ}
+        style={{
+          backgroundColor: colors.card,
+          color: colors.text,
+          padding: 12,
+          borderRadius: radius.md,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}
       />
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
+      ) : (
+        <FlatList
+          data={data ?? []}
+          keyExtractor={(item: any) => item.id}
+          ListEmptyComponent={
+            <EmptyState
+              emoji="🔍"
+              title={q ? 'No matches' : 'No students yet'}
+              subtitle={q ? 'Try a different search.' : undefined}
+            />
+          }
+          renderItem={({ item }: { item: any }) => {
+            const displayName = formatStudentName(item);
+            return (
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/(warden)/student-profile',
+                    params: { id: item.id, name: displayName },
+                  })
+                }
+              >
+                <Card
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View>
+                    <Text style={{ fontWeight: '700', color: colors.text }}>
+                      {displayName}
+                    </Text>
+                    <Muted>
+                      {item.email}
+                      {item.studentProfile?.roomNumber
+                        ? ` · Room ${item.studentProfile.roomNumber}`
+                        : ''}
+                    </Muted>
+                  </View>
+                  <Text style={{ fontSize: 20, color: colors.muted }}>›</Text>
+                </Card>
+              </Pressable>
+            );
+          }}
+        />
       )}
     </View>
   );

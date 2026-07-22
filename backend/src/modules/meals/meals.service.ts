@@ -207,10 +207,17 @@ export class MealsService {
     });
     if (!student) return null;
     const data = await this.monthData(studentId, month);
+
+    const surname = student.studentProfile?.surname?.trim();
+    const fullName =
+      surname && !student.fullName.toLowerCase().endsWith(surname.toLowerCase())
+        ? `${student.fullName} ${surname}`
+        : student.fullName;
+
     return {
       student: {
         id: student.id,
-        fullName: student.fullName,
+        fullName,
         rollNo: student.studentProfile?.rollNo ?? null,
         roomNumber: student.studentProfile?.roomNumber ?? null,
       },

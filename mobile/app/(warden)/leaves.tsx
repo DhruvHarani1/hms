@@ -10,6 +10,8 @@ function fmt(iso?: string) {
   return iso ? iso.slice(0, 10) : '';
 }
 
+import { formatStudentName } from '@/src/lib/formatName';
+
 export default function WardenLeaves() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['warden-leaves'],
@@ -39,7 +41,7 @@ export default function WardenLeaves() {
               }}
             >
               <Text style={{ fontWeight: '700', color: colors.text }}>
-                {item.student?.fullName}
+                {formatStudentName(item.student)}
               </Text>
               <Text style={{ color: colors.primary, fontWeight: '700' }}>
                 {fmt(item.startDate)} → {fmt(item.endDate)}

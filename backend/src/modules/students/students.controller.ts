@@ -33,6 +33,16 @@ class RejectDto {
   reason?: string;
 }
 
+function formatNameWithSurname(user: any): string {
+  if (!user) return '';
+  const fullName = (user.fullName || '').trim();
+  const surname = (user.studentProfile?.surname || user.surname || '').trim();
+  if (!fullName) return surname;
+  if (!surname) return fullName;
+  if (fullName.toLowerCase().endsWith(surname.toLowerCase())) return fullName;
+  return `${fullName} ${surname}`;
+}
+
 @Controller('students')
 export class StudentsController {
   constructor(
@@ -109,7 +119,7 @@ export class StudentsController {
   @Roles('warden', 'staff')
   @Get('requests')
   async requests(@CurrentUser() user: AuthUser) {
-    return this.prisma.user.findMany({
+    const list = await this.prisma.user.findMany({
       where: {
         hostelId: user.hostelId,
         role: { in: ['student', 'cook'] },
@@ -120,6 +130,10 @@ export class StudentsController {
       include: { studentProfile: true },
       orderBy: { createdAt: 'asc' },
     });
+    return list.map((s) => ({
+      ...s,
+      fullName: formatNameWithSurname(s),
+    }));
   }
 
   @Roles('warden', 'staff')
@@ -165,7 +179,7 @@ export class StudentsController {
   @Roles('warden', 'staff')
   @Get()
   async list(@CurrentUser() user: AuthUser, @Query('q') q?: string) {
-    return this.prisma.user.findMany({
+    const students = await this.prisma.user.findMany({
       where: {
         hostelId: user.hostelId,
         role: 'student',
@@ -175,12 +189,18 @@ export class StudentsController {
           OR: [
             { fullName: { contains: q, mode: 'insensitive' } },
             { email: { contains: q, mode: 'insensitive' } },
+            { studentProfile: { surname: { contains: q, mode: 'insensitive' } } },
           ],
         }),
       },
       include: { studentProfile: true },
       orderBy: { fullName: 'asc' },
     });
+
+    return students.map((s) => ({
+      ...s,
+      fullName: formatNameWithSurname(s),
+    }));
   }
 
   @Roles('warden', 'staff')
@@ -192,7 +212,10 @@ export class StudentsController {
     });
     if (!student) throw new BadRequestException('Student not found');
     const { passwordHash, ...rest } = student;
-    return rest;
+    return {
+      ...rest,
+      fullName: formatNameWithSurname(student),
+    };
   }
 
   @Roles('warden')

@@ -1,157 +1,168 @@
 import { useState } from 'react';
 import {
-  Alert,
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
-  RefreshControl,
+  ScrollView,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/src/lib/api';
-import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
+import { Button, Card, Field, Muted } from '@/src/components/ui';
 import {
   EmptyState,
   ErrorState,
   SkeletonList,
 } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
+import { formatStudentName } from '@/src/lib/formatName';
 
 export default function JoinRequests() {
   const qc = useQueryClient();
   const [rejecting, setRejecting] = useState<any | null>(null);
   const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['join-requests'],
     queryFn: async () => (await api.get('/students/requests')).data,
   });
 
-  function invalidate() {
-    qc.invalidateQueries({ queryKey: ['join-requests'] });
-    qc.invalidateQueries({ queryKey: ['join-requests-count'] });
-    qc.invalidateQueries({ queryKey: ['students'] });
-  }
-
-  async function approve(id: string, name: string) {
+  async function approve(id: string, fullName: string) {
+    setBusy(true);
     try {
       await api.patch(`/students/${id}/approve`);
-      invalidate();
-      Alert.alert('Approved', `${name} can now log in.`);
+      qc.invalidateQueries({ queryKey: ['join-requests'] });
+      qc.invalidateQueries({ queryKey: ['students'] });
     } catch (e: any) {
-      Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.');
+      const err = e.response?.data?.message ?? 'Failed to approve request';
+      console.warn('Approve error:', err);
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function confirmReject() {
+  async function reject() {
     if (!rejecting) return;
+    setBusy(true);
     try {
       await api.patch(`/students/${rejecting.id}/reject`, {
-        reason: reason || undefined,
+        reason: reason.trim() || undefined,
       });
-      invalidate();
       setRejecting(null);
       setReason('');
+      qc.invalidateQueries({ queryKey: ['join-requests'] });
     } catch (e: any) {
-      Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.');
+      const err = e.response?.data?.message ?? 'Failed to reject request';
+      console.warn('Reject error:', err);
+    } finally {
+      setBusy(false);
     }
   }
-
-  if (isLoading) return <SkeletonList count={4} />;
-  if (isError) return <ErrorState onRetry={refetch} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <FlatList
-        contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
-        data={data ?? []}
-        keyExtractor={(item: any) => item.id}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            emoji="🎉"
-            title="No pending requests"
-            subtitle="New students who sign up will appear here for approval."
-          />
-        }
-        renderItem={({ item }: { item: any }) => (
-          <Card style={{ gap: 8 }}>
-            <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text }}>
-              {item.fullName}
-            </Text>
-            <Muted>
-              {item.email}
-              {item.studentProfile?.rollNo
-                ? ` · ${item.studentProfile.rollNo}`
-                : ''}
-              {item.studentProfile?.roomNumber
-                ? ` · Room ${item.studentProfile.roomNumber}`
-                : ''}
-            </Muted>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
-              <Pressable
-                onPress={() => approve(item.id, item.fullName)}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.success,
-                  borderRadius: radius.md,
-                  paddingVertical: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: '#fff', fontWeight: '700' }}>Approve</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setRejecting(item)}
-                style={{
-                  flex: 1,
-                  backgroundColor: '#fff',
-                  borderWidth: 1,
-                  borderColor: colors.danger,
-                  borderRadius: radius.md,
-                  paddingVertical: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ color: colors.danger, fontWeight: '700' }}>
-                  Reject
+      {isLoading ? (
+        <SkeletonList count={4} />
+      ) : isError ? (
+        <ErrorState onRetry={refetch} />
+      ) : (
+        <FlatList
+          contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
+          data={data ?? []}
+          keyExtractor={(item: any) => item.id}
+          ListEmptyComponent={
+            <EmptyState
+              emoji="🎉"
+              title="No pending requests"
+              subtitle="New students who sign up will appear here for approval."
+            />
+          }
+          renderItem={({ item }: { item: any }) => {
+            const displayName = formatStudentName(item);
+            return (
+              <Card style={{ gap: 8 }}>
+                <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text }}>
+                  {displayName}
                 </Text>
-              </Pressable>
-            </View>
-          </Card>
-        )}
-      />
+                <Muted>
+                  {item.email}
+                  {item.studentProfile?.rollNo
+                    ? ` · ${item.studentProfile.rollNo}`
+                    : ''}
+                  {item.studentProfile?.roomNumber
+                    ? ` · Room ${item.studentProfile.roomNumber}`
+                    : ''}
+                </Muted>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  <Pressable
+                    onPress={() => approve(item.id, displayName)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.success,
+                      borderRadius: radius.md,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700' }}>Approve</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => setRejecting(item)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.danger + '18',
+                      borderWidth: 1,
+                      borderColor: colors.danger + '40',
+                      borderRadius: radius.md,
+                      paddingVertical: 12,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: colors.danger, fontWeight: '700' }}>Reject</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            );
+          }}
+        />
+      )}
 
+      {/* Reject Modal */}
       <Modal visible={!!rejecting} transparent animationType="fade">
         <View
           style={{
             flex: 1,
-            backgroundColor: '#0008',
+            backgroundColor: 'rgba(0,0,0,0.6)',
             justifyContent: 'center',
             padding: 24,
           }}
         >
-          <Card style={{ gap: 12 }}>
-            <H1>Reject request</H1>
-            <Muted>{rejecting?.fullName} — add an optional reason.</Muted>
+          <Card style={{ gap: 14 }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
+              Reject request
+            </Text>
+            <Muted>{formatStudentName(rejecting)} — add an optional reason.</Muted>
             <Field
               label="Reason (optional)"
+              placeholder="e.g. Incorrect room assignment"
               value={reason}
               onChangeText={setReason}
-              placeholder="e.g. Not a resident of this hostel"
             />
-            <Button title="Confirm reject" variant="danger" onPress={confirmReject} />
-            <Button
-              title="Cancel"
-              variant="outline"
-              onPress={() => {
-                setRejecting(null);
-                setReason('');
-              }}
-            />
+            <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              <Button
+                variant="outline"
+                title="Cancel"
+                onPress={() => {
+                  setRejecting(null);
+                  setReason('');
+                }}
+              />
+              <Button title="Confirm Reject" variant="danger" loading={busy} onPress={reject} />
+            </View>
           </Card>
         </View>
       </Modal>

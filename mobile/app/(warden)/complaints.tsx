@@ -16,6 +16,8 @@ const NEXT: Record<string, string> = {
   resolved: 'closed',
 };
 
+import { formatStudentName } from '@/src/lib/formatName';
+
 export default function WardenComplaints() {
   const qc = useQueryClient();
   const { data, isLoading, isError, refetch, isRefetching } = useQuery({
@@ -70,7 +72,7 @@ export default function WardenComplaints() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <View style={{ flex: 1 }}>
               <Muted>
-                By: {item.student?.fullName} · {item.category?.name ?? 'General'}
+                By: {formatStudentName(item.student)} · {item.category?.name ?? 'General'}
               </Muted>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '11', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>

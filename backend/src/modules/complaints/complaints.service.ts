@@ -93,7 +93,14 @@ export class ComplaintsService {
       },
       include: {
         category: true,
-        student: { select: { id: true, fullName: true, email: true } },
+        student: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            studentProfile: { select: { surname: true } },
+          },
+        },
         attachments: true,
         _count: { select: { replies: true, upvotes: true } },
         upvotes: {
@@ -108,13 +115,25 @@ export class ComplaintsService {
     });
 
     return complaints.map((c) => {
-      const { upvotes, _count, attachments, ...rest } = c;
+      const { upvotes, _count, attachments, student, ...rest } = c;
       const signedAttachments = attachments?.map((a) => ({
         ...a,
         fileUrl: this.uploads.signedViewUrl(a.fileUrl),
       })) ?? [];
+
+      let formattedStudent = student;
+      if (student) {
+        const surname = student.studentProfile?.surname?.trim();
+        const fullName =
+          surname && !student.fullName.toLowerCase().endsWith(surname.toLowerCase())
+            ? `${student.fullName} ${surname}`
+            : student.fullName;
+        formattedStudent = { ...student, fullName };
+      }
+
       return {
         ...rest,
+        student: formattedStudent,
         attachments: signedAttachments,
         _count,
         upvoteCount: _count.upvotes,
