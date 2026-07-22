@@ -9,16 +9,6 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { CreateConversationDto, SendMessageDto } from './dto/chat.dto';
 
-function formatNameWithSurname(user: any): string {
-  if (!user) return '';
-  const fullName = (user.fullName || '').trim();
-  const surname = (user.studentProfile?.surname || user.surname || '').trim();
-  if (!fullName) return surname;
-  if (!surname) return fullName;
-  if (fullName.toLowerCase().endsWith(surname.toLowerCase())) return fullName;
-  return `${fullName} ${surname}`;
-}
-
 @Injectable()
 export class ChatService {
   constructor(
@@ -31,7 +21,7 @@ export class ChatService {
 
   /** List all active users in the hostel (for starting new DMs). */
   async listHostelUsers(userId: string, hostelId: string) {
-    const users = await this.prisma.user.findMany({
+    return this.prisma.user.findMany({
       where: {
         hostelId,
         status: 'active',
@@ -43,18 +33,9 @@ export class ChatService {
         fullName: true,
         avatarUrl: true,
         role: true,
-        studentProfile: { select: { surname: true } },
       },
       orderBy: { fullName: 'asc' },
     });
-
-    return users.map((u) => ({
-      id: u.id,
-      fullName: formatNameWithSurname(u),
-      avatarUrl: u.avatarUrl,
-      role: u.role,
-      studentProfile: u.studentProfile,
-    }));
   }
 
   // ─────────────── Conversations ───────────────
@@ -69,30 +50,12 @@ export class ChatService {
         conversation: {
           include: {
             members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    fullName: true,
-                    avatarUrl: true,
-                    role: true,
-                    studentProfile: { select: { surname: true } },
-                  },
-                },
-              },
+              include: { user: { select: { id: true, fullName: true, avatarUrl: true, role: true } } },
             },
             messages: {
               orderBy: { createdAt: 'desc' },
               take: 1,
-              include: {
-                sender: {
-                  select: {
-                    id: true,
-                    fullName: true,
-                    studentProfile: { select: { surname: true } },
-                  },
-                },
-              },
+              include: { sender: { select: { id: true, fullName: true } } },
             },
           },
         },
@@ -104,27 +67,30 @@ export class ChatService {
       .map((m) => {
         const conv = m.conversation;
         const lastMsg = conv.messages[0] ?? null;
-
-        const otherMem = conv.members.find((mem) => mem.userId !== userId);
-        const directName = otherMem ? formatNameWithSurname(otherMem.user) : 'Unknown';
+        const unread = m.lastReadAt
+          ? conv.messages.filter((msg) => msg.createdAt > m.lastReadAt!).length
+          : lastMsg ? 1 : 0;
 
         return {
           id: conv.id,
           type: conv.type,
-          name: conv.type === 'direct' ? directName : conv.name,
-          avatarUrl: conv.type === 'direct' ? (otherMem?.user.avatarUrl ?? null) : conv.avatarUrl,
+          name: conv.type === 'direct'
+            ? conv.members.find((mem) => mem.userId !== userId)?.user.fullName ?? 'Unknown'
+            : conv.name,
+          avatarUrl: conv.type === 'direct'
+            ? conv.members.find((mem) => mem.userId !== userId)?.user.avatarUrl ?? null
+            : conv.avatarUrl,
           members: conv.members.map((mem) => ({
             id: mem.user.id,
-            fullName: formatNameWithSurname(mem.user),
+            fullName: mem.user.fullName,
             avatarUrl: mem.user.avatarUrl,
             role: mem.user.role,
-            studentProfile: mem.user.studentProfile,
           })),
           lastMessage: lastMsg
             ? {
                 id: lastMsg.id,
                 senderId: lastMsg.senderId,
-                senderName: formatNameWithSurname(lastMsg.sender),
+                senderName: lastMsg.sender.fullName,
                 type: lastMsg.type,
                 content: lastMsg.type === 'text' ? lastMsg.content : '📷 Photo',
                 createdAt: lastMsg.createdAt,
@@ -264,14 +230,7 @@ export class ChatService {
       orderBy: { createdAt: 'asc' },
       take: limit,
       include: {
-        sender: {
-          select: {
-            id: true,
-            fullName: true,
-            avatarUrl: true,
-            studentProfile: { select: { surname: true } },
-          },
-        },
+        sender: { select: { id: true, fullName: true, avatarUrl: true } },
       },
     });
 
@@ -280,7 +239,7 @@ export class ChatService {
       id: msg.id,
       conversationId: msg.conversationId,
       senderId: msg.senderId,
-      senderName: formatNameWithSurname(msg.sender),
+      senderName: msg.sender.fullName,
       senderAvatar: msg.sender.avatarUrl,
       type: msg.type,
       content: msg.content,
@@ -308,14 +267,7 @@ export class ChatService {
         content: dto.content,
       },
       include: {
-        sender: {
-          select: {
-            id: true,
-            fullName: true,
-            avatarUrl: true,
-            studentProfile: { select: { surname: true } },
-          },
-        },
+        sender: { select: { id: true, fullName: true, avatarUrl: true } },
       },
     });
 
@@ -332,7 +284,7 @@ export class ChatService {
     });
 
     if (otherMembers.length > 0) {
-      const senderName = formatNameWithSurname(message.sender);
+      const senderName = message.sender.fullName;
       const preview = dto.type === 'image' ? '📷 Photo' : dto.content.slice(0, 100);
       const conv = member.conversation;
       const title = conv.type === 'group'
@@ -354,7 +306,7 @@ export class ChatService {
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
-      senderName: formatNameWithSurname(message.sender),
+      senderName: message.sender.fullName,
       senderAvatar: message.sender.avatarUrl,
       type: message.type,
       content: message.content,

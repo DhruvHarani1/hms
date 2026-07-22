@@ -8,7 +8,7 @@ import { getFileUrl } from '@/src/lib/upload';
 import { Button, Card, Muted } from '@/src/components/ui';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 function Row({ label, value }: { label: string; value?: any }) {
   return (
@@ -101,7 +101,7 @@ export default function WardenStudentProfile() {
         <Text style={{ fontSize: 12, fontWeight: '800', color: colors.primary, marginBottom: 4 }}>
           PERSONAL
         </Text>
-        <Row label="Name" value={formatStudentName(data)} />
+        <Row label="Name" value={data?.fullName} />
         <Row label="Father's name" value={p.fatherName} />
         <Row label="Surname" value={p.surname} />
         <Row label="Date of birth" value={p.dob?.slice(0, 10)} />

@@ -15,7 +15,7 @@ import { colors, radius } from '@/src/lib/theme';
 import { useChatConversations } from '@/src/hooks/useChat';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -275,7 +275,7 @@ export default function ChatListScreen() {
                     <Text style={{ fontSize: 18 }}>👤</Text>
                   </View>
                   <View>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{formatStudentName(u)}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>{u.fullName}</Text>
                     <Text style={{ fontSize: 12, color: colors.muted }}>{u.role}</Text>
                   </View>
                 </Pressable>

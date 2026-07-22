@@ -446,24 +446,8 @@ export class ExpensesService {
         fullName: true,
         role: true,
         email: true,
-        studentProfile: { select: { surname: true } },
       },
       orderBy: { fullName: 'asc' },
-    });
-
-    return members.map((m) => {
-      const surname = m.studentProfile?.surname?.trim();
-      const fullName =
-        surname && !m.fullName.toLowerCase().endsWith(surname.toLowerCase())
-          ? `${m.fullName} ${surname}`
-          : m.fullName;
-      return {
-        id: m.id,
-        fullName,
-        role: m.role,
-        email: m.email,
-        studentProfile: m.studentProfile,
-      };
     });
   }
 }

@@ -33,15 +33,7 @@ class RejectDto {
   reason?: string;
 }
 
-function formatNameWithSurname(user: any): string {
-  if (!user) return '';
-  const fullName = (user.fullName || '').trim();
-  const surname = (user.studentProfile?.surname || user.surname || '').trim();
-  if (!fullName) return surname;
-  if (!surname) return fullName;
-  if (fullName.toLowerCase().endsWith(surname.toLowerCase())) return fullName;
-  return `${fullName} ${surname}`;
-}
+
 
 @Controller('students')
 export class StudentsController {
@@ -130,10 +122,7 @@ export class StudentsController {
       include: { studentProfile: true },
       orderBy: { createdAt: 'asc' },
     });
-    return list.map((s) => ({
-      ...s,
-      fullName: formatNameWithSurname(s),
-    }));
+    return list;
   }
 
   @Roles('warden', 'staff')
@@ -197,10 +186,7 @@ export class StudentsController {
       orderBy: { fullName: 'asc' },
     });
 
-    return students.map((s) => ({
-      ...s,
-      fullName: formatNameWithSurname(s),
-    }));
+    return students;
   }
 
   @Roles('warden', 'staff')
@@ -212,10 +198,7 @@ export class StudentsController {
     });
     if (!student) throw new BadRequestException('Student not found');
     const { passwordHash, ...rest } = student;
-    return {
-      ...rest,
-      fullName: formatNameWithSurname(student),
-    };
+    return rest;
   }
 
   @Roles('warden')

@@ -12,7 +12,7 @@ import { api } from '@/src/lib/api';
 import { Card, Muted } from '@/src/components/ui';
 import { EmptyState, ErrorState, SkeletonList } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 export default function AttendanceStudents() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function AttendanceStudents() {
           keyExtractor={(item: any) => item.id}
           ListEmptyComponent={<EmptyState emoji="📋" title="No students" />}
           renderItem={({ item }: { item: any }) => {
-            const displayName = formatStudentName(item);
+            const displayName = item.fullName;
             return (
               <Pressable
                 onPress={() =>

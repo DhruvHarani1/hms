@@ -105,7 +105,7 @@ export class LeavesService {
   }
 
   async listForWarden(hostelId: string) {
-    const list = await this.prisma.leaveRequest.findMany({
+    return this.prisma.leaveRequest.findMany({
       where: { hostelId },
       include: {
         student: {
@@ -113,29 +113,11 @@ export class LeavesService {
             id: true,
             fullName: true,
             email: true,
-            studentProfile: { select: { surname: true } },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
-    });
-
-    return list.map((item) => {
-      if (!item.student) return item;
-      const surname = item.student.studentProfile?.surname?.trim();
-      const fullName =
-        surname && !item.student.fullName.toLowerCase().endsWith(surname.toLowerCase())
-          ? `${item.student.fullName} ${surname}`
-          : item.student.fullName;
-
-      return {
-        ...item,
-        student: {
-          ...item.student,
-          fullName,
-        },
-      };
     });
   }
 

@@ -18,7 +18,7 @@ import {
   SkeletonList,
 } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 export default function JoinRequests() {
   const qc = useQueryClient();
@@ -82,7 +82,7 @@ export default function JoinRequests() {
             />
           }
           renderItem={({ item }: { item: any }) => {
-            const displayName = formatStudentName(item);
+            const displayName = item.fullName;
             return (
               <Card style={{ gap: 8 }}>
                 <Text style={{ fontWeight: '700', fontSize: 16, color: colors.text }}>
@@ -145,7 +145,7 @@ export default function JoinRequests() {
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
               Reject request
             </Text>
-            <Muted>{formatStudentName(rejecting)} — add an optional reason.</Muted>
+            <Muted>{rejecting?.fullName} — add an optional reason.</Muted>
             <Field
               label="Reason (optional)"
               placeholder="e.g. Incorrect room assignment"

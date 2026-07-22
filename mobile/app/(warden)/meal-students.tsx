@@ -16,7 +16,7 @@ import {
   SkeletonList,
 } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 export default function MealStudents() {
   const router = useRouter();
@@ -65,7 +65,7 @@ export default function MealStudents() {
             <EmptyState emoji="🍽️" title="No students" />
           }
           renderItem={({ item }: { item: any }) => {
-            const displayName = formatStudentName(item);
+            const displayName = item.fullName;
             return (
               <Pressable
                 onPress={() =>

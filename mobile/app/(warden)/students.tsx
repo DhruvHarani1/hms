@@ -13,7 +13,7 @@ import { api } from '@/src/lib/api';
 import { Card, Muted } from '@/src/components/ui';
 import { EmptyState } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 
 export default function WardenStudents() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function WardenStudents() {
             />
           }
           renderItem={({ item }: { item: any }) => {
-            const displayName = formatStudentName(item);
+            const displayName = item.fullName;
             return (
               <Pressable
                 onPress={() =>

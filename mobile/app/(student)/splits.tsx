@@ -18,7 +18,7 @@ import { useAuth } from '@/src/stores/auth';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 import { pickAndUpload } from '@/src/lib/upload';
-import { formatStudentName } from '@/src/lib/formatName';
+
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -347,7 +347,7 @@ export default function SplitsScreen() {
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <View style={{ flex: 1, marginRight: 8 }}>
                           <Text style={{ fontWeight: '700', color: colors.text }}>
-                            {formatStudentName(b.user)} claims to have paid
+                            {b.user.fullName} claims to have paid
                           </Text>
                           <Muted>For "{p.title}"</Muted>
                         </View>
@@ -417,7 +417,7 @@ export default function SplitsScreen() {
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '700', color: colors.text }}>
-                      {formatStudentName(b.user)}
+                      {b.user.fullName}
                     </Text>
                     <Text
                       style={{
@@ -482,7 +482,7 @@ export default function SplitsScreen() {
                       {item.title}
                     </Text>
                     <Muted style={{ fontSize: 12 }}>
-                      Paid by {isPayer ? 'You' : formatStudentName(item.payer)} •{' '}
+                      Paid by {isPayer ? 'You' : item.payer.fullName} •{' '}
                       {new Date(item.createdAt).toLocaleDateString()}
                     </Muted>
                   </View>
@@ -513,7 +513,7 @@ export default function SplitsScreen() {
                       }}
                     >
                       <Text style={{ fontSize: 12, color: colors.text }}>
-                        • {formatStudentName(s.user)}
+                        • {s.user.fullName}
                       </Text>
                       <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                         <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>
@@ -747,7 +747,7 @@ export default function SplitsScreen() {
                         >
                           <View>
                             <Text style={{ fontWeight: '600', color: colors.text }}>
-                              {formatStudentName(m)}
+                              {m.fullName}
                             </Text>
                             <Text
                               style={{
@@ -848,7 +848,7 @@ export default function SplitsScreen() {
                     const m = members?.find((mb: any) => mb.id === id);
                     return (
                       <Text key={id} style={{ fontSize: 12, color: '#166534' }}>
-                        • {formatStudentName(m)} owes: ₹{(calculatedShares[id] || 0).toFixed(2)}{' '}
+                        • {m?.fullName} owes: ₹{(calculatedShares[id] || 0).toFixed(2)}{' '}
                         {splitType === 'PERCENTAGE' && `(${customAmounts[id] || 0}%)`}
                       </Text>
                     );

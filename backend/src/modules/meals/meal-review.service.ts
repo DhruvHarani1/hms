@@ -117,9 +117,6 @@ export class MealReviewService {
         student: {
           select: {
             fullName: true,
-            studentProfile: {
-              select: { surname: true },
-            },
           },
         },
       },
@@ -146,23 +143,14 @@ export class MealReviewService {
       dinner: counts.dinner > 0 ? parseFloat((sums.dinner / counts.dinner).toFixed(1)) : 0,
     };
 
-    const feed = reviews.map((r) => {
-      const baseName = r.student?.fullName ?? 'Unknown Student';
-      const surname = r.student?.studentProfile?.surname?.trim();
-      const studentName =
-        surname && !baseName.toLowerCase().endsWith(surname.toLowerCase())
-          ? `${baseName} ${surname}`
-          : baseName;
-
-      return {
-        id: r.id,
-        mealType: r.mealType,
-        rating: r.rating,
-        comment: r.comment,
-        createdAt: r.createdAt,
-        studentName,
-      };
-    });
+    const feed = reviews.map((r) => ({
+      id: r.id,
+      mealType: r.mealType,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+      studentName: r.student?.fullName ?? 'Unknown Student',
+    }));
 
     return {
       averages,

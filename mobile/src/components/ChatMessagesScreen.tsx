@@ -18,7 +18,7 @@ import { useLocalSearchParams, Stack } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { colors } from '@/src/lib/theme';
-import { formatStudentName } from '@/src/lib/formatName';
+
 import { useChatMessages } from '@/src/hooks/useChat';
 import { ChatBubble } from '@/src/components/ChatBubble';
 import { ChatInput } from '@/src/components/ChatInput';
@@ -113,7 +113,7 @@ export default function ChatMessagesScreen() {
         setConvType(conv.type);
         if (conv.type === 'direct') {
           const other = conv.members.find((m: any) => m.user.id !== user?.id);
-          setConvName(formatStudentName(other?.user) || 'Chat');
+          setConvName(other?.user.fullName ?? 'Chat');
         } else {
           setConvName(conv.name ?? 'Group');
         }
