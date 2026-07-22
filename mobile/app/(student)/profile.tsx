@@ -62,7 +62,11 @@ export default function StudentProfile() {
     const p = data.studentProfile ?? {};
     const next: Record<string, string> = {};
     for (const key of ALL_KEYS) {
-      let v = USER_KEYS.includes(key) ? data[key] : p[key];
+      let v = USER_KEYS.includes(key)
+        ? key === 'fullName'
+          ? (data.firstName ?? data.fullName)
+          : data[key]
+        : p[key];
       if ((key === 'dob' || key === 'admissionDate') && v) v = String(v).slice(0, 10);
       next[key] = v != null ? String(v) : '';
     }

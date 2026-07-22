@@ -6,6 +6,16 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
+function extractFirstName(fullName?: string | null, surname?: string | null): string {
+  const name = (fullName || '').trim();
+  const sur = (surname || '').trim();
+  if (!name) return '';
+  if (sur && name.toLowerCase().endsWith(sur.toLowerCase())) {
+    return name.slice(0, -sur.length).trim();
+  }
+  return name;
+}
+
 @Controller('users')
 export class UsersController {
   constructor(private prisma: PrismaService) {}
@@ -18,7 +28,12 @@ export class UsersController {
     });
     if (!found) return null;
     const { passwordHash, ...rest } = found;
-    return rest;
+    const surname = rest.studentProfile?.surname;
+    const firstName = extractFirstName(rest.fullName, surname);
+    return {
+      ...rest,
+      firstName,
+    };
   }
 
   @Patch('me')
@@ -28,41 +43,29 @@ export class UsersController {
   ) {
     const { fullName, phone, avatarUrl, dob, admissionDate, surname, ...rest } = dto;
 
-    // Build User update
+    const current = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      include: { studentProfile: true },
+    });
+
+    const currentSurname = surname !== undefined ? surname?.trim() : current?.studentProfile?.surname?.trim();
+    const inputFirstName = fullName !== undefined ? fullName.trim() : extractFirstName(current?.fullName, currentSurname);
+
+    let updatedFullName = current?.fullName;
+    if (inputFirstName && currentSurname) {
+      if (inputFirstName.toLowerCase().endsWith(currentSurname.toLowerCase())) {
+        updatedFullName = inputFirstName;
+      } else {
+        updatedFullName = `${inputFirstName} ${currentSurname}`;
+      }
+    } else if (inputFirstName) {
+      updatedFullName = inputFirstName;
+    }
+
     const userData: any = {};
-    if (fullName !== undefined) userData.fullName = fullName;
+    if (updatedFullName !== undefined) userData.fullName = updatedFullName;
     if (phone !== undefined) userData.phone = phone;
     if (avatarUrl !== undefined) userData.avatarUrl = avatarUrl;
-
-    // If surname changed, combine firstName + surname into User.fullName
-    if (user.role === 'student' && surname !== undefined) {
-      const currentUser = await this.prisma.user.findUnique({
-        where: { id: user.userId },
-        select: { fullName: true },
-      });
-      if (currentUser) {
-        // Use the new fullName if provided, otherwise the existing one
-        const baseName = (fullName ?? currentUser.fullName ?? '').trim();
-        const surnameClean = surname.trim();
-        if (surnameClean) {
-          // Strip old surname if it was already appended
-          const parts = baseName.split(' ');
-          // Find the first name (everything before the last word if >1 word)
-          // But since we don't know the original first name vs surname split,
-          // we trust the StudentProfile.surname as the source of truth
-          const currentProfile = await this.prisma.studentProfile.findFirst({
-            where: { userId: user.userId },
-            select: { surname: true },
-          });
-          const oldSurname = currentProfile?.surname?.trim();
-          let firstName = baseName;
-          if (oldSurname && baseName.toLowerCase().endsWith(oldSurname.toLowerCase())) {
-            firstName = baseName.slice(0, -oldSurname.length).trim();
-          }
-          userData.fullName = `${firstName} ${surnameClean}`;
-        }
-      }
-    }
 
     if (Object.keys(userData).length > 0) {
       await this.prisma.user.update({
@@ -91,6 +94,10 @@ export class UsersController {
     });
     if (!found) return null;
     const { passwordHash, ...safe } = found;
-    return safe;
+    const updatedFirstName = extractFirstName(safe.fullName, safe.studentProfile?.surname);
+    return {
+      ...safe,
+      firstName: updatedFirstName,
+    };
   }
 }
