@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, Text, View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
-import { Card, Muted } from '@/src/components/ui';
+import { API_URL } from '@/src/lib/config';
+import { Button, Card, Muted } from '@/src/components/ui';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
 import { MealDayModal } from '@/src/components/MealDayModal';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
@@ -15,6 +16,7 @@ export default function StudentMealsWardenView() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const month = monthKey(cursor);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -24,13 +26,37 @@ export default function StudentMealsWardenView() {
   });
 
   const days: DayMap = data?.days ?? {};
-  const marked = new Set<string>(Object.keys(days));
+
+  // Highlight in BLUE only days where the student is eating lunch or dinner
+  const marked = new Set<string>(
+    Object.keys(days).filter((k) => days[k].lunch || days[k].dinner)
+  );
+
+  // Highlight in RED days where student opted OUT (not eating lunch AND not eating dinner)
+  const dangerDates = new Set<string>(
+    Object.keys(days).filter((k) => !days[k].lunch && !days[k].dinner)
+  );
+
   const selState = selected
     ? days[selected] ?? { lunch: false, dinner: false, breakfast: false }
     : { lunch: false, dinner: false, breakfast: false };
 
   function shift(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
+  }
+
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      const res = await api.post('/meals/export-link', { month });
+      const token = res.data.token;
+      const downloadUrl = `${API_URL}/meals/export?token=${token}&month=${month}`;
+      await Linking.openURL(downloadUrl);
+    } catch (e: any) {
+      Alert.alert('Export Failed', e?.response?.data?.message ?? 'Could not export Excel file.');
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -58,14 +84,26 @@ export default function StudentMealsWardenView() {
             </Muted>
           </Card>
 
+          <Button
+            title={exporting ? 'Generating Excel...' : '📥  Export Meals Excel (.xlsx)'}
+            onPress={handleExportExcel}
+            disabled={exporting}
+            variant="outline"
+          />
+
           <Card>
             <MonthCalendar
               monthDate={cursor}
               marked={marked}
+              dangerDates={dangerDates}
               onDayPress={setSelected}
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
             />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8, justifyContent: 'center' }}>
+              <Muted style={{ color: colors.primary }}>🔵 Ate / Eating</Muted>
+              <Muted style={{ color: colors.danger }}>🔴 Opted Out (Not Eaten)</Muted>
+            </View>
           </Card>
 
           <Card style={{ alignItems: 'center', gap: 4 }}>

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { Alert, Linking, ScrollView, Text } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/lib/api';
-import { Card, Muted } from '@/src/components/ui';
+import { API_URL } from '@/src/lib/config';
+import { Button, Card, Muted } from '@/src/components/ui';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
@@ -11,6 +12,7 @@ import { colors } from '@/src/lib/theme';
 export default function StudentAttendanceWardenView() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const [cursor, setCursor] = useState(() => new Date());
+  const [exporting, setExporting] = useState(false);
   const month = monthKey(cursor);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -23,6 +25,20 @@ export default function StudentAttendanceWardenView() {
 
   function shift(delta: number) {
     setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
+  }
+
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      const res = await api.post('/attendance/export-link', { month });
+      const token = res.data.token;
+      const downloadUrl = `${API_URL}/attendance/export?token=${token}&month=${month}`;
+      await Linking.openURL(downloadUrl);
+    } catch (e: any) {
+      Alert.alert('Export Failed', e?.response?.data?.message ?? 'Could not export Excel file.');
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -47,6 +63,13 @@ export default function StudentAttendanceWardenView() {
             </Muted>
           </Card>
 
+          <Button
+            title={exporting ? 'Generating Excel...' : '📥  Export Attendance Excel (.xlsx)'}
+            onPress={handleExportExcel}
+            disabled={exporting}
+            variant="outline"
+          />
+
           <Card>
             <MonthCalendar
               monthDate={cursor}
@@ -55,7 +78,7 @@ export default function StudentAttendanceWardenView() {
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
             />
-            <Muted>Red = absent</Muted>
+            <Muted style={{ marginTop: 8 }}>🔴 Red = absent day</Muted>
           </Card>
 
           <Card style={{ alignItems: 'center', gap: 4 }}>
