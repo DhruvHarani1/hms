@@ -10,7 +10,15 @@ export async function fetchVersion() {
     if (badge && data.latestVersion) {
       badge.textContent = `v${data.latestVersion}`;
     }
+
+    if (data.apkUrl) {
+      const downloadBtns = document.querySelectorAll('a[href*="/download/apk"]');
+      downloadBtns.forEach((btn) => {
+        btn.setAttribute('href', `${API_BASE}/download/apk`);
+      });
+    }
   } catch {
     // Silently fail — use fallback value from HTML
   }
 }
+
