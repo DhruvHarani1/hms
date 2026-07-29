@@ -1,10 +1,11 @@
 # deps
 node_modules/
 
-# builds
+# builds & binaries
 dist/
 .expo/
 web-build/
+*.apk
 
 # env / secrets
 .env
