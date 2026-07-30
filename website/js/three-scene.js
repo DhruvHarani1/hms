@@ -1,8 +1,30 @@
 import * as THREE from 'three';
 
+// ─── Mobile Guard ───
+// Skip the entire 3D scene on mobile/tablet or when WebGL is unavailable.
+// Three.js + WebGL is a heavy GPU workload that kills performance on iPhones.
+function isMobileOrNoWebGL() {
+  if (window.innerWidth < 1024) return true;
+  try {
+    const canvas = document.createElement('canvas');
+    return !(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
+  } catch {
+    return true;
+  }
+}
+
 export function initThreeScene() {
   const canvas = document.getElementById('hero-canvas');
   if (!canvas) return;
+
+  // Skip entirely on mobile/tablet — use CSS background instead
+  if (isMobileOrNoWebGL()) {
+    canvas.style.display = 'none';
+    return;
+  }
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
@@ -16,10 +38,12 @@ export function initThreeScene() {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     alpha: true,
-    antialias: true,
+    antialias: false, // Disable antialias for better performance
+    powerPreference: 'low-power', // Request low-power GPU mode
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Cap pixel ratio at 1.5 for performance (was 2)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 
   // ─── Materials ───
   const primaryMat = new THREE.MeshStandardMaterial({
@@ -46,9 +70,9 @@ export function initThreeScene() {
     opacity: 0.12,
   });
 
-  // ─── Geometries ───
+  // ─── Geometries — reduced complexity for performance ───
   const torusKnot = new THREE.Mesh(
-    new THREE.TorusKnotGeometry(4.5, 1.2, 128, 32),
+    new THREE.TorusKnotGeometry(4.5, 1.2, 96, 24), // reduced from 128,32
     primaryMat,
   );
   torusKnot.position.set(12, 2, -8);
@@ -69,14 +93,14 @@ export function initThreeScene() {
   scene.add(octahedron);
 
   const bigSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(12, 48, 48),
+    new THREE.SphereGeometry(12, 32, 32), // reduced from 48,48
     wireMat,
   );
   bigSphere.position.set(0, 0, -20);
   scene.add(bigSphere);
 
-  // ─── Small Floating Particles ───
-  const particleCount = 200;
+  // ─── Small Floating Particles — reduced count ───
+  const particleCount = 120; // reduced from 200
   const particleGeo = new THREE.BufferGeometry();
   const positions = new Float32Array(particleCount * 3);
 
@@ -114,29 +138,47 @@ export function initThreeScene() {
   pointLight2.position.set(-10, -5, 8);
   scene.add(pointLight2);
 
-  // ─── Mouse Tracking ───
+  // ─── Mouse Tracking (desktop only) ───
   let mouseX = 0;
   let mouseY = 0;
 
   window.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
     mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
-  });
+  }, { passive: true });
 
   // ─── Resize ───
+  let resizeTimeout;
   window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      // If resized to mobile, stop rendering
+      if (window.innerWidth < 1024) {
+        canvas.style.display = 'none';
+        return;
+      }
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }, 100);
+  }, { passive: true });
+
+  // ─── Animate with visibility check ───
+  let animationId;
+  let isPageVisible = true;
+
+  document.addEventListener('visibilitychange', () => {
+    isPageVisible = !document.hidden;
+    if (isPageVisible) animate();
+    else cancelAnimationFrame(animationId);
   });
 
-  // ─── Animate ───
   function animate() {
-    requestAnimationFrame(animate);
+    if (!isPageVisible) return;
+    animationId = requestAnimationFrame(animate);
 
     const time = Date.now() * 0.001;
 
-    // Gentle rotations
     torusKnot.rotation.x = time * 0.15;
     torusKnot.rotation.y = time * 0.1;
     torusKnot.position.y = 2 + Math.sin(time * 0.5) * 1.5;
@@ -154,7 +196,7 @@ export function initThreeScene() {
 
     particles.rotation.y = time * 0.02;
 
-    // Mouse follow parallax
+    // Mouse parallax
     camera.position.x += (mouseX * 2 - camera.position.x) * 0.02;
     camera.position.y += (-mouseY * 1.5 - camera.position.y) * 0.02;
     camera.lookAt(scene.position);

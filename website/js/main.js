@@ -3,25 +3,44 @@ import { initScrollAnimations } from './scroll-animations.js';
 import { initFaq } from './faq.js';
 import { fetchVersion } from './version.js';
 
-// ─── Initialize Modules ───
-initSmoothScroll();
+const isMobile = window.innerWidth < 1024;
+
+// ─── Initialize non-heavy modules immediately ───
 initScrollAnimations();
 initFaq();
-fetchVersion();
+
+// ─── Defer version fetch — not critical for display ───
+setTimeout(() => fetchVersion(), 1000);
+
+// ─── Smooth scroll — mobile guard is inside ───
+initSmoothScroll();
+
+// ─── Lazy-load Three.js scene only on desktop, after first paint ───
+if (!isMobile) {
+  // Use requestIdleCallback to defer Three.js until browser is idle
+  const loadThreeScene = () => {
+    import('./three-scene.js').then(({ initThreeScene }) => {
+      initThreeScene();
+    });
+  };
+
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(loadThreeScene, { timeout: 3000 });
+  } else {
+    setTimeout(loadThreeScene, 1000);
+  }
+}
 
 // ─── Nav Scroll Effect ───
 const nav = document.getElementById('nav');
-let lastScroll = 0;
 
 window.addEventListener('scroll', () => {
-  const current = window.scrollY;
-  if (current > 60) {
+  if (window.scrollY > 60) {
     nav.classList.add('scrolled');
   } else {
     nav.classList.remove('scrolled');
   }
-  lastScroll = current;
-});
+}, { passive: true });
 
 // ─── Smooth Anchor Scroll ───
 document.querySelectorAll('a[href^="#"]').forEach((anchor) => {

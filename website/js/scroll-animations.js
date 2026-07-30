@@ -1,9 +1,63 @@
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+// ─── Mobile guard ───
+const isMobile = window.innerWidth < 1024;
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-gsap.registerPlugin(ScrollTrigger);
+// ─── Lightweight IntersectionObserver for mobile ───
+// Replaces GSAP + ScrollTrigger on mobile to save ~100KB of JS parsing.
+function initMobileAnimations() {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+  );
 
-export function initScrollAnimations() {
+  const animatedEls = document.querySelectorAll(
+    '.stats__card, .section-label, .section-title, .section-desc, .feat, .role, .step, .faq__item, .cta__box'
+  );
+  animatedEls.forEach((el) => {
+    el.classList.add('will-animate');
+    observer.observe(el);
+  });
+
+  // Counter animation with IntersectionObserver
+  document.querySelectorAll('[data-count]').forEach((el) => {
+    const counterObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const target = parseInt(el.dataset.count, 10);
+          let start = 0;
+          const duration = 1500;
+          const step = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = Math.min((timestamp - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3); // ease-out-cubic
+            el.textContent = Math.round(eased * target) + '+';
+            if (progress < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+          counterObserver.unobserve(el);
+        }
+      });
+    }, { threshold: 0.5 });
+    counterObserver.observe(el);
+  });
+}
+
+// ─── Desktop GSAP animations (lazy loaded) ───
+async function initDesktopAnimations() {
+  const [{ default: gsap }, { ScrollTrigger }] = await Promise.all([
+    import('gsap'),
+    import('gsap/ScrollTrigger'),
+  ]);
+
+  gsap.registerPlugin(ScrollTrigger);
+
   // ─── Counter Animation (Stats) ───
   document.querySelectorAll('[data-count]').forEach((el) => {
     const target = parseInt(el.dataset.count, 10);
@@ -31,29 +85,16 @@ export function initScrollAnimations() {
   // ─── Stats Cards Entrance ───
   gsap.utils.toArray('.stats__card').forEach((card, i) => {
     gsap.from(card, {
-      scrollTrigger: {
-        trigger: card,
-        start: 'top 90%',
-      },
-      y: 40,
-      opacity: 0,
-      duration: 0.6,
-      delay: i * 0.1,
-      ease: 'power2.out',
+      scrollTrigger: { trigger: card, start: 'top 90%' },
+      y: 40, opacity: 0, duration: 0.6, delay: i * 0.1, ease: 'power2.out',
     });
   });
 
   // ─── Section Headers Fade Up ───
   gsap.utils.toArray('.section-label, .section-title, .section-desc').forEach((header) => {
     gsap.from(header, {
-      scrollTrigger: {
-        trigger: header,
-        start: 'top 92%',
-      },
-      y: 35,
-      opacity: 0,
-      duration: 0.7,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: header, start: 'top 92%' },
+      y: 35, opacity: 0, duration: 0.7, ease: 'power3.out',
     });
   });
 
@@ -67,10 +108,7 @@ export function initScrollAnimations() {
         end: 'bottom 40%',
         scrub: 1,
       },
-      scale: 0.85,
-      rotateX: 16,
-      opacity: 0.5,
-      ease: 'power2.out',
+      scale: 0.85, rotateX: 16, opacity: 0.5, ease: 'power2.out',
     });
 
     const mockupContainer = document.querySelector('.mockup-container');
@@ -79,23 +117,15 @@ export function initScrollAnimations() {
         const rect = mockupContainer.getBoundingClientRect();
         const x = e.clientX - rect.left - rect.width / 2;
         const y = e.clientY - rect.top - rect.height / 2;
-        const rotateX = (-y / rect.height) * 18;
-        const rotateY = (x / rect.width) * 18;
         gsap.to(phoneFrame, {
-          rotateX,
-          rotateY,
+          rotateX: (-y / rect.height) * 18,
+          rotateY: (x / rect.width) * 18,
           duration: 0.4,
           ease: 'power2.out',
         });
       });
-
       mockupContainer.addEventListener('mouseleave', () => {
-        gsap.to(phoneFrame, {
-          rotateX: 0,
-          rotateY: 0,
-          duration: 0.8,
-          ease: 'power2.out',
-        });
+        gsap.to(phoneFrame, { rotateX: 0, rotateY: 0, duration: 0.8, ease: 'power2.out' });
       });
     }
   }
@@ -103,75 +133,41 @@ export function initScrollAnimations() {
   // ─── Feature Cards Staggered Entrance ───
   gsap.utils.toArray('.feat').forEach((card, i) => {
     gsap.from(card, {
-      scrollTrigger: {
-        trigger: card,
-        start: 'top 92%',
-      },
-      y: 50,
-      opacity: 0,
-      duration: 0.6,
-      delay: (i % 3) * 0.1,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: card, start: 'top 92%' },
+      y: 50, opacity: 0, duration: 0.6, delay: (i % 3) * 0.1, ease: 'power3.out',
     });
   });
 
-  // ─── Role Cards Entrance ───
+  // ─── Role Cards ───
   gsap.utils.toArray('.role').forEach((card, i) => {
     gsap.from(card, {
-      scrollTrigger: {
-        trigger: card,
-        start: 'top 90%',
-      },
-      y: 60,
-      opacity: 0,
-      duration: 0.7,
-      delay: i * 0.12,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: card, start: 'top 90%' },
+      y: 60, opacity: 0, duration: 0.7, delay: i * 0.12, ease: 'power3.out',
     });
   });
 
-  // ─── Step Timeline Cards Entrance ───
+  // ─── Step Cards ───
   gsap.utils.toArray('.step').forEach((step, i) => {
     gsap.from(step, {
-      scrollTrigger: {
-        trigger: step,
-        start: 'top 90%',
-      },
-      y: 45,
-      opacity: 0,
-      duration: 0.7,
-      delay: i * 0.15,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: step, start: 'top 90%' },
+      y: 45, opacity: 0, duration: 0.7, delay: i * 0.15, ease: 'power3.out',
     });
   });
 
-  // ─── FAQ Items Entrance ───
+  // ─── FAQ Items ───
   gsap.utils.toArray('.faq__item').forEach((item, i) => {
     gsap.from(item, {
-      scrollTrigger: {
-        trigger: item,
-        start: 'top 94%',
-      },
-      y: 30,
-      opacity: 0,
-      duration: 0.5,
-      delay: i * 0.08,
-      ease: 'power2.out',
+      scrollTrigger: { trigger: item, start: 'top 94%' },
+      y: 30, opacity: 0, duration: 0.5, delay: i * 0.08, ease: 'power2.out',
     });
   });
 
-  // ─── CTA Box Scale-Up ───
+  // ─── CTA Box ───
   const ctaBox = document.querySelector('.cta__box');
   if (ctaBox) {
     gsap.from(ctaBox, {
-      scrollTrigger: {
-        trigger: ctaBox,
-        start: 'top 88%',
-      },
-      scale: 0.94,
-      opacity: 0,
-      duration: 0.7,
-      ease: 'power3.out',
+      scrollTrigger: { trigger: ctaBox, start: 'top 88%' },
+      scale: 0.94, opacity: 0, duration: 0.7, ease: 'power3.out',
     });
   }
 
@@ -188,4 +184,19 @@ export function initScrollAnimations() {
       },
     });
   });
+}
+
+export function initScrollAnimations() {
+  if (prefersReducedMotion) return; // Respect user accessibility preference
+
+  if (isMobile) {
+    initMobileAnimations();
+  } else {
+    // Defer GSAP load until page is idle so it doesn't block first paint
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => initDesktopAnimations(), { timeout: 2000 });
+    } else {
+      setTimeout(() => initDesktopAnimations(), 500);
+    }
+  }
 }

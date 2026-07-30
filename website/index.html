@@ -6,10 +6,14 @@
   <title>AIFDMS — The Official Hostel Management App</title>
   <meta name="description" content="Download the AIFDMS Hostel Management mobile app. Manage meals, split bills, file complaints, chat, and stay updated with real-time push alerts.">
 
-  <!-- Fonts -->
+  <!-- Preload critical assets -->
+  <link rel="preload" href="/assets/logo.jpg" as="image" type="image/jpeg">
+
+  <!-- Fonts: non-render-blocking load trick -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"></noscript>
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/css/variables.css">
@@ -24,6 +28,25 @@
   <link rel="stylesheet" href="/css/faq.css">
   <link rel="stylesheet" href="/css/cta.css">
   <link rel="stylesheet" href="/css/footer.css">
+
+  <!-- Mobile IntersectionObserver animation CSS -->
+  <style>
+    /* Shared animation base for mobile IntersectionObserver */
+    .will-animate {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .will-animate.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* Ensure native smooth scroll on iOS */
+    html {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+  </style>
 
   <!-- Favicon -->
   <link rel="icon" href="/assets/logo.jpg" type="image/jpeg">
