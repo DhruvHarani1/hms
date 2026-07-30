@@ -2,10 +2,10 @@ import { Controller, Get, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { Public } from './common/decorators/public.decorator';
 
-// Permanent download URL — update this after each new APK GitHub release
+// Permanent download URL — update this after each new APK build
 const WEBSITE_URL = 'https://hms-api-47qf.onrender.com/api/v1/download';
 const PERMANENT_GITHUB_APK_URL =
-  'https://github.com/DhruvHarani1/hms/releases/download/v2.0.0/app-release.apk';
+  'https://expo.dev/artifacts/eas/-ZyVaN1IkvMXNLGY3F3K6EaLBKjZ75nIgx8aTKyWl6g.apk';
 
 @Public()
 @Controller('download')
