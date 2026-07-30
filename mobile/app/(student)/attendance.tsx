@@ -5,6 +5,7 @@ import { api } from '@/src/lib/api';
 import { Button, Card, Field, H1, Muted } from '@/src/components/ui';
 import { DateField } from '@/src/components/form';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
+import { EditRequestSheet } from '@/src/components/EditRequestSheet';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors } from '@/src/lib/theme';
 
@@ -20,6 +21,10 @@ export default function StudentAttendance() {
   const [end, setEnd] = useState(todayStr());
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Past-day edit request state
+  const [editDay, setEditDay] = useState<string | null>(null);
+
   const month = monthKey(cursor);
   const qKey = ['attendance-month', month];
 
@@ -33,11 +38,32 @@ export default function StudentAttendance() {
     queryFn: async () => (await api.get('/leaves/me')).data,
   });
 
+  // Fetch my edit requests for the current month to show ⏳ badges
+  const { data: editRequests } = useQuery({
+    queryKey: ['my-edit-requests'],
+    queryFn: async () => (await api.get('/edit-requests/mine')).data,
+  });
+
   const absent = new Set<string>(data?.absentDates ?? []);
+  const today = todayStr();
+
+  // Build pending dates set for calendar badges
+  const pendingDates = new Set<string>(
+    (editRequests ?? [])
+      .filter((r: any) => r.status === 'pending')
+      .map((r: any) => r.date as string),
+  );
 
   async function toggle(dateStr: string) {
+    // Past day: show edit request sheet instead
+    if (dateStr < today) {
+      setEditDay(dateStr);
+      return;
+    }
+
+    // Today or future: existing toggle logic
     const nowAbsent = !absent.has(dateStr);
-    // optimistic
+    // Optimistic update
     qc.setQueryData(qKey, (old: any) => {
       const set = new Set<string>(old?.absentDates ?? []);
       if (nowAbsent) set.add(dateStr);
@@ -83,7 +109,7 @@ export default function StudentAttendance() {
       setReason('');
       qc.invalidateQueries({ queryKey: qKey });
       qc.invalidateQueries({ queryKey: ['my-leaves'] });
-      qc.invalidateQueries({ queryKey: ['attendance-month', monthKey(new Date(start)) ] });
+      qc.invalidateQueries({ queryKey: ['attendance-month', monthKey(new Date(start))] });
       Alert.alert('✅ Leave submitted', 'Those days are marked absent and the warden is notified.');
     } catch (e: any) {
       Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.');
@@ -92,13 +118,18 @@ export default function StudentAttendance() {
     }
   }
 
+  // Current value for the tapped past day (present=true if not in absent set)
+  const editDayCurrentValues = editDay
+    ? { attendance: !absent.has(editDay) }
+    : { attendance: true };
+
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={{ padding: 16, gap: 16 }}
     >
       <H1>Attendance</H1>
-      <Muted>You're present by default. Tap a day to mark yourself absent (red).</Muted>
+      <Muted>You're present by default. Tap a day to mark yourself absent (red). Past days are locked 🔒.</Muted>
 
       {isLoading ? (
         <SkeletonList count={2} />
@@ -111,6 +142,7 @@ export default function StudentAttendance() {
               monthDate={cursor}
               marked={new Set()}
               dangerDates={absent}
+              pendingDates={pendingDates}
               onDayPress={toggle}
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
@@ -146,6 +178,15 @@ export default function StudentAttendance() {
         ))
       )}
 
+      {/* Past-day edit request sheet */}
+      <EditRequestSheet
+        day={editDay}
+        currentValues={editDayCurrentValues}
+        onClose={() => setEditDay(null)}
+        invalidateKeys={[qKey, ['my-edit-requests']]}
+      />
+
+      {/* Leave application modal */}
       <Modal visible={leaveOpen} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'flex-end' }}>
           <View style={{ padding: 16 }}>

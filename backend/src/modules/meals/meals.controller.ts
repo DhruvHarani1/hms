@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -55,6 +56,15 @@ export class MealsController {
     private readonly reviewService: MealReviewService,
   ) {}
 
+  /** Returns today's date string in IST (YYYY-MM-DD). */
+  private todayIST(): string {
+    return new Date(
+      new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }),
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+
   // ── Dish master lists + daily menu ──
   @Roles('warden', 'staff', 'cook')
   @Get('dishes')
@@ -101,6 +111,11 @@ export class MealsController {
   @Post('mark')
   @HttpCode(200)
   mark(@CurrentUser() user: AuthUser, @Body() dto: MarkMealDto) {
+    if (dto.date < this.todayIST()) {
+      throw new ForbiddenException(
+        'Past days are locked. Submit an edit request instead.',
+      );
+    }
     return this.service.setMeal(
       user.hostelId,
       user.userId,
@@ -114,6 +129,7 @@ export class MealsController {
   @Post('bulk')
   @HttpCode(200)
   bulk(@CurrentUser() user: AuthUser, @Body() dto: BulkMealDto) {
+    // Bulk only affects current/future days; past dates guard is enforced inside service
     return this.service.bulk(
       user.hostelId,
       user.userId,

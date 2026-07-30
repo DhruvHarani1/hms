@@ -32,6 +32,14 @@ export default function WardenLayout() {
     refetchInterval: 20000,
   });
   const pendingCount = (requests ?? []).length;
+
+  // Badge for edit requests
+  const { data: editCount } = useQuery({
+    queryKey: ['edit-requests-count'],
+    queryFn: async () => (await api.get('/edit-requests/count')).data,
+    refetchInterval: 30000,
+  });
+  const editPendingCount = editCount?.count ?? 0;
   return (
     <Tabs
       backBehavior="history"
@@ -64,6 +72,14 @@ export default function WardenLayout() {
           title: 'Requests',
           tabBarIcon: icon('🙋'),
           tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="edit-requests"
+        options={{
+          title: 'Edits',
+          tabBarIcon: icon('✏️'),
+          tabBarBadge: editPendingCount > 0 ? editPendingCount : undefined,
         }}
       />
       <Tabs.Screen

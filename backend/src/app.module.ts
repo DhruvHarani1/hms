@@ -20,6 +20,7 @@ import { UsageModule } from './modules/usage/usage.module';
 import { BirthdayModule } from './modules/birthday/birthday.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { EditRequestsModule } from './modules/edit-requests/edit-requests.module';
 import { HealthController } from './health.controller';
 import { DownloadController } from './download.controller';
 
@@ -46,6 +47,7 @@ import { DownloadController } from './download.controller';
     BirthdayModule,
     ChatModule,
     ExpensesModule,
+    EditRequestsModule,
   ],
   controllers: [HealthController, DownloadController],
 })

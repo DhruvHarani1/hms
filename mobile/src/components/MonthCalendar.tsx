@@ -3,8 +3,10 @@ import { colors, radius } from '@/src/lib/theme';
 
 /* Pure-RN month calendar. No native deps.
  * - `monthDate`: any Date within the month to render.
- * - `marked`: Set of 'YYYY-MM-DD' strings that are ticked.
- * - `onToggle(dateStr)`: if provided, cells are tappable (editable). Omit = read-only.
+ * - `marked`: Set of 'YYYY-MM-DD' strings that are ticked (blue).
+ * - `dangerDates`: Set of 'YYYY-MM-DD' strings shown in red.
+ * - `pendingDates`: Set of 'YYYY-MM-DD' past days with a pending edit request (⏳).
+ * - `onDayPress(dateStr)`: if provided, cells are tappable. Omit = read-only.
  * - `onPrev` / `onNext`: month navigation.
  */
 
@@ -27,6 +29,7 @@ export function MonthCalendar({
   monthDate,
   marked,
   dangerDates,
+  pendingDates,
   onDayPress,
   onPrev,
   onNext,
@@ -35,6 +38,7 @@ export function MonthCalendar({
   monthDate: Date;
   marked: Set<string>;
   dangerDates?: Set<string>;
+  pendingDates?: Set<string>;
   onDayPress?: (dateStr: string) => void;
   onPrev?: () => void;
   onNext?: () => void;
@@ -57,7 +61,7 @@ export function MonthCalendar({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Chunk into rows of 7 for explicit row rendering (avoids flexWrap issues).
+  // Chunk into rows of 7 for explicit row rendering.
   const rows: (number | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
     rows.push(cells.slice(i, i + 7));
@@ -110,7 +114,10 @@ export function MonthCalendar({
             const key = `${year}-${pad(month + 1)}-${pad(d)}`;
             const on = marked.has(key);
             const danger = dangerDates?.has(key) ?? false;
+            const isPast = key < today;
+            const isPending = pendingDates?.has(key) ?? false;
             const isToday = key === today;
+
             return (
               <View
                 key={ci}
@@ -141,16 +148,25 @@ export function MonthCalendar({
                         : on
                           ? colors.primary
                           : colors.border,
+                    // Dim past days slightly to indicate they're locked
+                    opacity: isPast && !isPending ? 0.65 : 1,
                   }}
                 >
                   <Text
                     style={{
                       color: danger || on ? '#fff' : colors.text,
                       fontWeight: isToday ? '800' : '600',
+                      fontSize: 13,
                     }}
                   >
                     {d}
                   </Text>
+                  {/* Pending edit request badge */}
+                  {isPending && (
+                    <Text style={{ fontSize: 8, lineHeight: 10, color: '#f59e0b' }}>
+                      ⏳
+                    </Text>
+                  )}
                 </Pressable>
               </View>
             );

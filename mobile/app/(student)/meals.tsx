@@ -5,6 +5,7 @@ import { api } from '@/src/lib/api';
 import { Card, H1, Muted } from '@/src/components/ui';
 import { MonthCalendar, monthKey } from '@/src/components/MonthCalendar';
 import { MealDayModal } from '@/src/components/MealDayModal';
+import { EditRequestSheet } from '@/src/components/EditRequestSheet';
 import { SkeletonList, ErrorState } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
 
@@ -14,6 +15,7 @@ export default function StudentMeals() {
   const qc = useQueryClient();
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState<string | null>(null);
+  const [editDay, setEditDay] = useState<string | null>(null);
   const month = monthKey(cursor);
   const qKey = ['meals-month', month];
 
@@ -28,15 +30,38 @@ export default function StudentMeals() {
     queryFn: async () => (await api.get('/meals/menu')).data,
   });
 
+  // Fetch edit requests to show ⏳ badge on past days with pending requests
+  const { data: editRequests } = useQuery({
+    queryKey: ['my-edit-requests'],
+    queryFn: async () => (await api.get('/edit-requests/mine')).data,
+  });
+
   const days: DayMap = data?.days ?? {};
   // Only highlight days where the student is eating lunch or dinner
   const marked = new Set<string>(
     Object.keys(days).filter((k) => days[k].lunch || days[k].dinner)
   );
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Build pending set for calendar badges
+  const pendingDates = new Set<string>(
+    (editRequests ?? [])
+      .filter((r: any) => r.status === 'pending')
+      .map((r: any) => r.date as string),
+  );
+
   const selState = selected
     ? days[selected] ?? { lunch: false, dinner: false, breakfast: false }
     : { lunch: false, dinner: false, breakfast: false };
+
+  // editDay current values for the EditRequestSheet
+  const editDayCurrentValues = editDay
+    ? {
+        lunch: days[editDay]?.lunch ?? false,
+        dinner: days[editDay]?.dinner ?? false,
+      }
+    : { lunch: false, dinner: false };
 
   // Reviews logic
   const todayObj = new Date();
@@ -291,7 +316,14 @@ export default function StudentMeals() {
             <MonthCalendar
               monthDate={cursor}
               marked={marked}
-              onDayPress={setSelected}
+              pendingDates={pendingDates}
+              onDayPress={(dateStr) => {
+                if (dateStr < today) {
+                  setEditDay(dateStr); // past day → edit request sheet
+                } else {
+                  setSelected(dateStr); // today/future → normal meal modal
+                }
+              }}
               onPrev={() => shift(-1)}
               onNext={() => shift(1)}
             />
@@ -334,6 +366,14 @@ export default function StudentMeals() {
         editable
         onToggle={toggleMeal}
         onClose={() => setSelected(null)}
+      />
+
+      {/* Past-day edit request sheet */}
+      <EditRequestSheet
+        day={editDay}
+        currentValues={editDayCurrentValues}
+        onClose={() => setEditDay(null)}
+        invalidateKeys={[qKey, ['my-edit-requests']]}
       />
     </ScrollView>
   );

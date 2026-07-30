@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ForbiddenException,
   Get,
   NotFoundException,
   Param,
@@ -43,9 +44,23 @@ export class AttendanceController {
     private readonly jwt: JwtService,
   ) {}
 
+  /** Returns today's date string in IST (YYYY-MM-DD). */
+  private todayIST(): string {
+    return new Date(
+      new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }),
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+
   @Post('mark')
   @HttpCode(200)
   mark(@CurrentUser() user: AuthUser, @Body() dto: MarkAttendanceDto) {
+    if (dto.date < this.todayIST()) {
+      throw new ForbiddenException(
+        'Past days are locked. Submit an edit request instead.',
+      );
+    }
     return this.service.setAbsent(user.hostelId, user.userId, dto.date, dto.absent);
   }
 
