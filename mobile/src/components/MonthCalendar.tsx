@@ -3,9 +3,9 @@ import { colors, radius } from '@/src/lib/theme';
 
 /* Pure-RN month calendar. No native deps.
  * - `monthDate`: any Date within the month to render.
- * - `marked`: Set of 'YYYY-MM-DD' strings that are ticked (blue).
- * - `dangerDates`: Set of 'YYYY-MM-DD' strings shown in red.
- * - `pendingDates`: Set of 'YYYY-MM-DD' past days with a pending edit request (⏳).
+ * - `marked`: Set of 'YYYY-MM-DD' — shown in GREEN (present / eating).
+ * - `dangerDates`: Set of 'YYYY-MM-DD' — shown in RED (absent / skipping).
+ * - `pendingDates`: Set of 'YYYY-MM-DD' — past days with a pending edit request (⏳).
  * - `onDayPress(dateStr)`: if provided, cells are tappable. Omit = read-only.
  * - `onPrev` / `onNext`: month navigation.
  */
@@ -61,7 +61,7 @@ export function MonthCalendar({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  // Chunk into rows of 7 for explicit row rendering.
+  // Chunk into rows of 7.
   const rows: (number | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) {
     rows.push(cells.slice(i, i + 7));
@@ -91,20 +91,14 @@ export function MonthCalendar({
       <View style={{ flexDirection: 'row' }}>
         {WEEKDAYS.map((w, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-            <Text
-              style={{
-                color: colors.muted,
-                fontWeight: '700',
-                fontSize: 12,
-              }}
-            >
+            <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 12 }}>
               {w}
             </Text>
           </View>
         ))}
       </View>
 
-      {/* Day grid — one explicit row per week */}
+      {/* Day grid */}
       {rows.map((row, ri) => (
         <View key={ri} style={{ flexDirection: 'row' }}>
           {row.map((d, ci) => {
@@ -112,21 +106,31 @@ export function MonthCalendar({
               return <View key={ci} style={{ flex: 1, height: 44 }} />;
             }
             const key = `${year}-${pad(month + 1)}-${pad(d)}`;
-            const on = marked.has(key);
-            const danger = dangerDates?.has(key) ?? false;
-            const isPast = key < today;
+            const isGreen = marked.has(key);           // present / eating
+            const isRed   = dangerDates?.has(key) ?? false; // absent / skipping
+            const isPast    = key < today;
             const isPending = pendingDates?.has(key) ?? false;
-            const isToday = key === today;
+            const isToday   = key === today;
+
+            // Colour priority: red > green > today-outline > default
+            const bgColor = isRed
+              ? colors.danger
+              : isGreen
+                ? colors.success
+                : colors.card;
+
+            const borderColor = isToday
+              ? colors.primary
+              : isRed
+                ? colors.danger
+                : isGreen
+                  ? colors.success
+                  : colors.border;
+
+            const textColor = isRed || isGreen ? '#fff' : colors.text;
 
             return (
-              <View
-                key={ci}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  padding: 3,
-                }}
-              >
+              <View key={ci} style={{ flex: 1, height: 44, padding: 3 }}>
                 <Pressable
                   disabled={!onDayPress}
                   onPress={() => onDayPress?.(key)}
@@ -135,37 +139,18 @@ export function MonthCalendar({
                     borderRadius: radius.md,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: danger
-                      ? colors.danger
-                      : on
-                        ? colors.primary
-                        : colors.card,
+                    backgroundColor: bgColor,
                     borderWidth: isToday ? 2 : 1,
-                    borderColor: isToday
-                      ? colors.primary
-                      : danger
-                        ? colors.danger
-                        : on
-                          ? colors.primary
-                          : colors.border,
-                    // Dim past days slightly to indicate they're locked
-                    opacity: isPast && !isPending ? 0.65 : 1,
+                    borderColor,
+                    // Dim past days slightly to indicate locked
+                    opacity: isPast && !isPending ? 0.75 : 1,
                   }}
                 >
-                  <Text
-                    style={{
-                      color: danger || on ? '#fff' : colors.text,
-                      fontWeight: isToday ? '800' : '600',
-                      fontSize: 13,
-                    }}
-                  >
+                  <Text style={{ color: textColor, fontWeight: isToday ? '800' : '600', fontSize: 13 }}>
                     {d}
                   </Text>
-                  {/* Pending edit request badge */}
                   {isPending && (
-                    <Text style={{ fontSize: 8, lineHeight: 10, color: '#f59e0b' }}>
-                      ⏳
-                    </Text>
+                    <Text style={{ fontSize: 8, lineHeight: 10, color: '#f59e0b' }}>⏳</Text>
                   )}
                 </Pressable>
               </View>

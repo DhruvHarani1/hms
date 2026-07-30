@@ -37,9 +37,15 @@ export default function StudentMeals() {
   });
 
   const days: DayMap = data?.days ?? {};
-  // Only highlight days where the student is eating lunch or dinner
+
+  // Green = eating at least lunch or dinner that day
   const marked = new Set<string>(
     Object.keys(days).filter((k) => days[k].lunch || days[k].dinner)
+  );
+
+  // Red = opted out of both lunch AND dinner for that past day
+  const skippingDates = new Set<string>(
+    Object.keys(days).filter((k) => !days[k].lunch && !days[k].dinner)
   );
 
   const today = new Date().toISOString().slice(0, 10);
@@ -316,6 +322,7 @@ export default function StudentMeals() {
             <MonthCalendar
               monthDate={cursor}
               marked={marked}
+              dangerDates={skippingDates}
               pendingDates={pendingDates}
               onDayPress={(dateStr) => {
                 if (dateStr < today) {

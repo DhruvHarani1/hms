@@ -47,6 +47,19 @@ export default function StudentAttendance() {
   const absent = new Set<string>(data?.absentDates ?? []);
   const today = todayStr();
 
+  // Build green set: all days in the month up to today that are NOT absent
+  const presentDates = new Set<string>();
+  if (data) {
+    const [y, m] = (data.month ?? monthKey(cursor)).split('-').map(Number);
+    const daysInMonth = new Date(y, m, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (key <= today && !absent.has(key)) {
+        presentDates.add(key);
+      }
+    }
+  }
+
   // Build pending dates set for calendar badges
   const pendingDates = new Set<string>(
     (editRequests ?? [])
@@ -140,7 +153,7 @@ export default function StudentAttendance() {
           <Card>
             <MonthCalendar
               monthDate={cursor}
-              marked={new Set()}
+              marked={presentDates}
               dangerDates={absent}
               pendingDates={pendingDates}
               onDayPress={toggle}
