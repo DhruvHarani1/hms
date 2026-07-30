@@ -56,13 +56,10 @@ export class MealsController {
     private readonly reviewService: MealReviewService,
   ) {}
 
-  /** Returns today's date string in IST (YYYY-MM-DD). */
+  /** Returns today's date string in IST (YYYY-MM-DD) using UTC+5:30 offset. */
   private todayIST(): string {
-    return new Date(
-      new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }),
-    )
-      .toISOString()
-      .slice(0, 10);
+    const istMs = Date.now() + (5 * 60 + 30) * 60 * 1000;
+    return new Date(istMs).toISOString().slice(0, 10);
   }
 
   // ── Dish master lists + daily menu ──

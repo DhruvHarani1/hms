@@ -131,10 +131,7 @@ export class EditRequestsController {
   }
 
   private todayIST(): string {
-    return new Date(
-      new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }),
-    )
-      .toISOString()
-      .slice(0, 10);
+    const istMs = Date.now() + (5 * 60 + 30) * 60 * 1000;
+    return new Date(istMs).toISOString().slice(0, 10);
   }
 }

@@ -44,13 +44,11 @@ export class AttendanceController {
     private readonly jwt: JwtService,
   ) {}
 
-  /** Returns today's date string in IST (YYYY-MM-DD). */
+  /** Returns today's date string in IST (YYYY-MM-DD) using UTC+5:30 offset. */
   private todayIST(): string {
-    return new Date(
-      new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }),
-    )
-      .toISOString()
-      .slice(0, 10);
+    // IST = UTC + 5h30m. Use offset math — never re-parse toLocaleString output.
+    const istMs = Date.now() + (5 * 60 + 30) * 60 * 1000;
+    return new Date(istMs).toISOString().slice(0, 10);
   }
 
   @Post('mark')
