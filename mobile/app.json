@@ -2,7 +2,7 @@
   "expo": {
     "name": "AIFDMS Hostel App",
     "slug": "hms-mobile",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "scheme": "hmsapp",
     "userInterfaceStyle": "automatic",
@@ -20,7 +20,7 @@
     "android": {
       "package": "test.hms.mobile",
       "googleServicesFile": "./google-services.json",
-      "softwareKeyboardLayoutMode": "resize",
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

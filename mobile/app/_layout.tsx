@@ -3,7 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, Text, Linking } from 'react-native';
+import { ActivityIndicator, View, Text, Linking, KeyboardAvoidingView, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
@@ -155,7 +155,13 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <AuthGate />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={0}
+        >
+          <AuthGate />
+        </KeyboardAvoidingView>
       </SafeAreaProvider>
     </QueryClientProvider>
   );
