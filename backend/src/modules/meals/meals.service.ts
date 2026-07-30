@@ -88,7 +88,7 @@ export class MealsService {
     return { date: this.dateKey(date), meal, marked };
   }
 
-  /* ── Bulk over a whole month ──────────────────────────────────── */
+  /* ── Bulk over a whole month ────────────────────────────────────────── */
 
   async bulk(
     hostelId: string,
@@ -100,10 +100,22 @@ export class MealsService {
     const { year, mon, start, end, days } = this.monthRange(month);
     const meals: Meal[] = meal === 'both' ? ['lunch', 'dinner'] : [meal];
 
+    // Only operate on today and future dates — past days are locked.
+    // IST today = UTC + 5h30m using offset math (reliable on all Node versions).
+    const istMs = Date.now() + (5 * 60 + 30) * 60 * 1000;
+    const todayIST = new Date(istMs).toISOString().slice(0, 10);
+    const todayUTC = new Date(todayIST); // midnight UTC of IST today
+
+    // The effective start for bulk is max(month start, today IST)
+    const effectiveStart = start < todayUTC ? todayUTC : start;
+
     if (!marked) {
-      // Bulk opt-out: create opted_out rows for all dates
-      const dates = this.allMonthDates(year, mon, days);
-      const rows = dates.flatMap((date) =>
+      // Bulk opt-out: create opted_out rows only for today→end of month
+      const allDates = this.allMonthDates(year, mon, days);
+      const futureDates = allDates.filter((d) => d >= effectiveStart);
+      if (futureDates.length === 0) return this.monthData(studentId, month);
+
+      const rows = futureDates.flatMap((date) =>
         meals.map((mealType) => ({
           hostelId,
           studentId,
@@ -118,12 +130,12 @@ export class MealsService {
         skipDuplicates: true,
       });
     } else {
-      // Bulk opt-in: delete all opt-out rows
+      // Bulk opt-in: delete opt-out rows only for today→end of month
       await this.prisma.mealAttendance.deleteMany({
         where: {
           studentId,
           mealType: { in: meals },
-          date: { gte: start, lt: end },
+          date: { gte: effectiveStart, lt: end },
         },
       });
     }
