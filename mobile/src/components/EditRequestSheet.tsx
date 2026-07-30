@@ -3,7 +3,7 @@
  * Shows current values for attendance/lunch/dinner and lets the student
  * specify desired new values + a reason before submitting.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -40,11 +40,21 @@ interface Props {
 export function EditRequestSheet({ day, currentValues, onClose, invalidateKeys }: Props) {
   const qc = useQueryClient();
 
-  // Desired new values (pre-filled to current so student edits what they want)
+  // Desired new values — reset to currentValues whenever a new day is opened
   const [wantAttendance, setWantAttendance] = useState<boolean | undefined>(currentValues.attendance);
   const [wantLunch, setWantLunch] = useState<boolean | undefined>(currentValues.lunch);
   const [wantDinner, setWantDinner] = useState<boolean | undefined>(currentValues.dinner);
   const [reason, setReason] = useState('');
+
+  // Sync toggles to the actual current values whenever a different past day is tapped
+  useEffect(() => {
+    if (day) {
+      setWantAttendance(currentValues.attendance);
+      setWantLunch(currentValues.lunch);
+      setWantDinner(currentValues.dinner);
+      setReason('');
+    }
+  }, [day]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submit = useMutation({
     mutationFn: async () => {
