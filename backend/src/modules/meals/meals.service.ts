@@ -8,14 +8,15 @@ type BulkMeal = 'lunch' | 'dinner' | 'both';
 export class MealsService {
   constructor(private prisma: PrismaService) {}
 
-  /** "YYYY-MM-DD" (or today) → UTC-midnight Date (stable @db.Date keys). */
+  /** \"YYYY-MM-DD\" (or today in IST) → UTC-midnight Date (stable @db.Date keys). */
   private parseDate(input?: string): Date {
     if (input) {
       const [y, m, d] = input.split('-').map(Number);
       if (y && m && d) return new Date(Date.UTC(y, m - 1, d));
     }
-    const n = new Date();
-    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+    // Use IST (UTC+5:30) to determine "today"
+    const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    return new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate()));
   }
 
   private dateKey(d: Date): string {
@@ -30,9 +31,10 @@ export class MealsService {
     days: number;
     label: string;
   } {
-    const now = new Date();
-    let year = now.getUTCFullYear();
-    let mon = now.getUTCMonth();
+    // Use IST (UTC+5:30) for determining "current month"
+    const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    let year = nowIST.getUTCFullYear();
+    let mon = nowIST.getUTCMonth();
     if (month) {
       const [y, m] = month.split('-').map(Number);
       if (y && m) {

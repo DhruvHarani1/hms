@@ -10,8 +10,9 @@ export class AttendanceService {
       const [y, m, d] = input.split('-').map(Number);
       if (y && m && d) return new Date(Date.UTC(y, m - 1, d));
     }
-    const n = new Date();
-    return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
+    // Use IST (UTC+5:30) to determine "today"
+    const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    return new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate()));
   }
 
   private dateKey(d: Date): string {
@@ -19,9 +20,10 @@ export class AttendanceService {
   }
 
   private monthRange(month?: string) {
-    const now = new Date();
-    let year = now.getUTCFullYear();
-    let mon = now.getUTCMonth();
+    // Use IST (UTC+5:30) for determining "current month"
+    const nowIST = new Date(Date.now() + (5 * 60 + 30) * 60 * 1000);
+    let year = nowIST.getUTCFullYear();
+    let mon = nowIST.getUTCMonth();
     if (month) {
       const [y, m] = month.split('-').map(Number);
       if (y && m) {
