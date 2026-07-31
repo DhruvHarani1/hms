@@ -62,6 +62,7 @@ export default function StudentLayout() {
         options={{ title: 'Profile', tabBarIcon: icon('👤') }}
       />
       {/* Not in tab bar — reached via navigation */}
+      <Tabs.Screen name="achievements" options={{ href: null, title: 'Achievements' }} />
       <Tabs.Screen name="splits" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="expenditure" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="chat" options={{ href: null }} />
