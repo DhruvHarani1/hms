@@ -20,6 +20,19 @@ export class EditRequestsService {
     dto: { date: string; changes: Record<string, any>; reason: string },
   ) {
     const date = this.parseDate(dto.date);
+
+    // If a previous request exists for this day that was already reviewed
+    // (approved/rejected), delete it so the student can submit a fresh one.
+    // The unique constraint @@unique([studentId, date]) only allows one row
+    // per student per day — without this cleanup, Prisma throws P2002.
+    await this.prisma.attendanceEditRequest.deleteMany({
+      where: {
+        studentId,
+        date,
+        status: { in: ['approved', 'rejected'] },
+      },
+    });
+
     const req = await this.prisma.attendanceEditRequest.create({
       data: {
         hostelId,
