@@ -2,20 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 // ─── Badge Definitions ───
-// Each badge has: id, name, icon, description, category, and a check function
 export interface BadgeDef {
   id: string;
   name: string;
   icon: string;
   desc: string;
-  hint: string;        // shown when locked
+  hint: string;
   category: 'meals' | 'attendance' | 'community' | 'finance' | 'special';
 }
 
 const BADGE_DEFS: BadgeDef[] = [
   // Meal badges
-  { id: 'first_bite',       name: 'First Bite',       icon: '🥄', desc: 'Marked your first meal',                     hint: 'Mark your first meal',                   category: 'meals' },
-  { id: 'breakfast_person', name: 'Breakfast Person',  icon: '🌅', desc: 'Ate breakfast 10 times',                     hint: 'Eat breakfast 10 times',                 category: 'meals' },
+  { id: 'first_bite',       name: 'First Bite',       icon: '🥄', desc: 'Ate your first meal',                        hint: 'Eat your first meal',                    category: 'meals' },
+  { id: 'breakfast_person', name: 'Meal Regular',      icon: '🌅', desc: 'Ate 10+ meals total',                        hint: 'Eat 10 meals',                           category: 'meals' },
   { id: 'lunch_regular',    name: 'Lunch Regular',     icon: '☀️',  desc: 'Ate lunch 30 times',                        hint: 'Eat lunch 30 times',                     category: 'meals' },
   { id: 'dinner_fan',       name: 'Dinner Fan',        icon: '🌙', desc: 'Ate dinner 30 times',                       hint: 'Eat dinner 30 times',                    category: 'meals' },
   { id: 'iron_stomach',     name: 'Iron Stomach',      icon: '🦾', desc: 'Ate 50 total meals',                        hint: 'Eat 50 meals total',                     category: 'meals' },
@@ -47,64 +46,84 @@ const BADGE_DEFS: BadgeDef[] = [
 export class GamificationService {
   constructor(private prisma: PrismaService) {}
 
+  // ─────────────────────────────────────────────────────────────
+  // IMPORTANT — Inverted Data Model:
+  //   Attendance table: row EXISTS = ABSENT, no row = PRESENT
+  //   MealAttendance:   row with absent/opted_out = NOT eating
+  //                     no row (or status=present) = IS eating
+  //   So we query OPT-OUTS and subtract from totals.
+  // ─────────────────────────────────────────────────────────────
+
   // ─── Streaks ───
   async computeStreaks(studentId: string) {
     const todayStr = this.todayIST();
     const today = this.parseDate(todayStr);
 
-    // Get last 120 days of data in 2 parallel queries
-    const since = new Date(today);
-    since.setDate(since.getDate() - 120);
+    // Start from YESTERDAY — today is still in progress
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
 
-    const [absences, meals] = await Promise.all([
-      // Attendance: a row means ABSENT
+    // Cap streaks at user registration date
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { createdAt: true },
+    });
+    const joinDate = user
+      ? new Date(Date.UTC(user.createdAt.getUTCFullYear(), user.createdAt.getUTCMonth(), user.createdAt.getUTCDate()))
+      : yesterday;
+
+    const maxLookback = Math.min(
+      120,
+      Math.max(1, Math.floor((yesterday.getTime() - joinDate.getTime()) / 86400000) + 1),
+    );
+
+    const since = new Date(yesterday);
+    since.setDate(since.getDate() - maxLookback);
+
+    const [absences, mealOptOuts] = await Promise.all([
       this.prisma.attendance.findMany({
-        where: { studentId, date: { gte: since, lte: today } },
+        where: { studentId, date: { gte: since, lte: yesterday } },
         select: { date: true },
-        orderBy: { date: 'desc' },
       }),
-      // MealAttendance: status=present means ATE
+      // Inverted: query the opt-outs
       this.prisma.mealAttendance.findMany({
-        where: { studentId, date: { gte: since, lte: today }, status: 'present' },
+        where: {
+          studentId,
+          date: { gte: since, lte: yesterday },
+          mealType: { in: ['lunch', 'dinner'] },
+          status: { in: ['absent', 'opted_out'] },
+        },
         select: { date: true, mealType: true },
-        orderBy: { date: 'desc' },
       }),
     ]);
 
-    // Build lookup sets
     const absentDates = new Set(absences.map((a) => a.date.toISOString().slice(0, 10)));
 
-    // Meals: group by date -> set of meal types eaten
-    const mealsByDate = new Map<string, Set<string>>();
-    for (const m of meals) {
+    // Meals: group by date → set of meal types SKIPPED
+    const skippedByDate = new Map<string, Set<string>>();
+    for (const m of mealOptOuts) {
       const d = m.date.toISOString().slice(0, 10);
-      if (!mealsByDate.has(d)) mealsByDate.set(d, new Set());
-      mealsByDate.get(d)!.add(m.mealType);
+      if (!skippedByDate.has(d)) skippedByDate.set(d, new Set());
+      skippedByDate.get(d)!.add(m.mealType);
     }
 
-    // Walk backward from today counting streaks
     let attendanceStreak = 0;
     let mealStreak = 0;
     let perfectStreak = 0;
 
-    const cursor = new Date(today);
-    for (let i = 0; i < 120; i++) {
+    const cursor = new Date(yesterday);
+    for (let i = 0; i < maxLookback; i++) {
       const dateStr = cursor.toISOString().slice(0, 10);
       const isPresent = !absentDates.has(dateStr);
-      const mealsEaten = mealsByDate.get(dateStr) ?? new Set();
-      const ateAllMeals = mealsEaten.has('lunch') && mealsEaten.has('dinner');
+      const skipped = skippedByDate.get(dateStr) ?? new Set();
+      const ateAllMeals = !skipped.has('lunch') && !skipped.has('dinner');
 
-      // Attendance streak
       if (i === 0 || attendanceStreak === i) {
         if (isPresent) attendanceStreak = i + 1;
       }
-
-      // Meal streak (lunch + dinner)
       if (i === 0 || mealStreak === i) {
         if (ateAllMeals) mealStreak = i + 1;
       }
-
-      // Perfect streak (present + all meals)
       if (i === 0 || perfectStreak === i) {
         if (isPresent && ateAllMeals) perfectStreak = i + 1;
       }
@@ -128,29 +147,38 @@ export class GamificationService {
     const monday = new Date(today);
     monday.setDate(monday.getDate() - mondayOffset);
 
-    // Days elapsed this week (including today)
-    const daysElapsed = mondayOffset + 1;
+    // Use yesterday as end — today is in progress
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const effectiveEnd = yesterday < monday ? monday : yesterday;
+    const daysElapsed = Math.max(1, Math.floor((effectiveEnd.getTime() - monday.getTime()) / 86400000) + 1);
 
-    const [absences, meals] = await Promise.all([
+    const [absences, mealOptOuts] = await Promise.all([
       this.prisma.attendance.count({
-        where: { studentId, date: { gte: monday, lte: today } },
+        where: { studentId, date: { gte: monday, lte: effectiveEnd } },
       }),
       this.prisma.mealAttendance.count({
-        where: { studentId, date: { gte: monday, lte: today }, status: 'present' },
+        where: {
+          studentId,
+          date: { gte: monday, lte: effectiveEnd },
+          mealType: { in: ['lunch', 'dinner'] },
+          status: { in: ['absent', 'opted_out'] },
+        },
       }),
     ]);
 
     const daysPresent = daysElapsed - absences;
-    const totalPossibleMeals = daysElapsed * 2; // lunch + dinner
-    const totalEarned = daysPresent + meals;
-    const totalPossible = daysElapsed + totalPossibleMeals; // days + meals
+    const totalPossibleMeals = daysElapsed * 2;
+    const mealsEaten = totalPossibleMeals - mealOptOuts;
+    const totalEarned = daysPresent + mealsEaten;
+    const totalPossible = daysElapsed + totalPossibleMeals;
     const percentage = totalPossible > 0 ? Math.round((totalEarned / totalPossible) * 100) : 0;
 
     return {
       percentage,
       daysPresent,
       daysTotal: daysElapsed,
-      mealsEaten: meals,
+      mealsEaten,
       mealsTotal: totalPossibleMeals,
     };
   }
@@ -159,51 +187,66 @@ export class GamificationService {
   async computeBadges(studentId: string) {
     const todayStr = this.todayIST();
     const today = this.parseDate(todayStr);
-
-    // Month boundaries
     const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
     const dayOfMonth = today.getUTCDate();
 
-    // Gather all stats in parallel
     const [
-      totalMeals,
-      breakfastCount,
-      lunchCount,
-      dinnerCount,
+      user,
+      lunchOptOuts,
+      dinnerOptOuts,
+      totalMealOptOuts,
       totalComplaints,
       resolvedComplaints,
       totalSplits,
       hasBudget,
-      user,
       monthAbsences,
-      monthMeals,
+      monthMealOptOuts,
       streaks,
     ] = await Promise.all([
-      this.prisma.mealAttendance.count({ where: { studentId, status: 'present' } }),
-      this.prisma.mealAttendance.count({ where: { studentId, status: 'present', mealType: 'breakfast' } }),
-      this.prisma.mealAttendance.count({ where: { studentId, status: 'present', mealType: 'lunch' } }),
-      this.prisma.mealAttendance.count({ where: { studentId, status: 'present', mealType: 'dinner' } }),
+      this.prisma.user.findUnique({ where: { id: studentId }, select: { createdAt: true } }),
+      this.prisma.mealAttendance.count({
+        where: { studentId, mealType: 'lunch', status: { in: ['absent', 'opted_out'] } },
+      }),
+      this.prisma.mealAttendance.count({
+        where: { studentId, mealType: 'dinner', status: { in: ['absent', 'opted_out'] } },
+      }),
+      this.prisma.mealAttendance.count({
+        where: { studentId, mealType: { in: ['lunch', 'dinner'] }, status: { in: ['absent', 'opted_out'] } },
+      }),
       this.prisma.complaint.count({ where: { studentId } }),
       this.prisma.complaint.count({ where: { studentId, status: 'resolved' } }),
       this.prisma.expenseSplit.count({ where: { userId: studentId } }),
       this.prisma.studentBudget.findFirst({ where: { userId: studentId } }),
-      this.prisma.user.findUnique({ where: { id: studentId }, select: { createdAt: true } }),
       this.prisma.attendance.count({ where: { studentId, date: { gte: monthStart, lte: today } } }),
-      this.prisma.mealAttendance.count({ where: { studentId, status: 'present', date: { gte: monthStart, lte: today } } }),
+      this.prisma.mealAttendance.count({
+        where: {
+          studentId,
+          date: { gte: monthStart, lte: today },
+          mealType: { in: ['lunch', 'dinner'] },
+          status: { in: ['absent', 'opted_out'] },
+        },
+      }),
       this.computeStreaks(studentId),
     ]);
 
     const daysSinceJoin = user ? Math.floor((Date.now() - user.createdAt.getTime()) / 86400000) : 0;
-    const monthAttendancePct = dayOfMonth > 0 ? ((dayOfMonth - monthAbsences) / dayOfMonth) * 100 : 0;
-    const monthMealPct = dayOfMonth > 0 ? (monthMeals / (dayOfMonth * 2)) * 100 : 0;
+    const totalDays = Math.max(daysSinceJoin, 1);
 
-    // Evaluate each badge
+    // Inverted: total possible - opt-outs = eaten
+    const totalLunchEaten = Math.max(0, totalDays - lunchOptOuts);
+    const totalDinnerEaten = Math.max(0, totalDays - dinnerOptOuts);
+    const totalMealsEaten = Math.max(0, (totalDays * 2) - totalMealOptOuts);
+
+    const monthAttendancePct = dayOfMonth > 0 ? ((dayOfMonth - monthAbsences) / dayOfMonth) * 100 : 0;
+    const monthMealsEaten = (dayOfMonth * 2) - monthMealOptOuts;
+    const monthMealPct = dayOfMonth > 0 ? (monthMealsEaten / (dayOfMonth * 2)) * 100 : 0;
+
     const checks: Record<string, boolean> = {
-      first_bite:        totalMeals >= 1,
-      breakfast_person:  breakfastCount >= 10,
-      lunch_regular:     lunchCount >= 30,
-      dinner_fan:        dinnerCount >= 30,
-      iron_stomach:      totalMeals >= 50,
+      first_bite:        totalMealsEaten >= 1,
+      breakfast_person:  totalMealsEaten >= 10,
+      lunch_regular:     totalLunchEaten >= 30,
+      dinner_fan:        totalDinnerEaten >= 30,
+      iron_stomach:      totalMealsEaten >= 50,
       foodie_week:       streaks.meals.current >= 7,
       meal_machine:      monthMealPct >= 90,
       home_body:         streaks.attendance.current >= 7,
@@ -234,7 +277,7 @@ export class GamificationService {
     return { earned, locked, total: BADGE_DEFS.length, earnedCount: earned.length };
   }
 
-  // ─── Full gamification payload for dashboard ───
+  // ─── Full payload ───
   async getStudentGamification(studentId: string) {
     const [streaks, weeklyScore, badges] = await Promise.all([
       this.computeStreaks(studentId),
@@ -261,6 +304,6 @@ export class GamificationService {
     for (const m of milestones) {
       if (current < m) return m;
     }
-    return current + 50; // beyond 100, next is +50
+    return current + 50;
   }
 }
