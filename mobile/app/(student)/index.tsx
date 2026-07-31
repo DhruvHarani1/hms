@@ -5,6 +5,8 @@ import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
 import { Card, H1, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
+import StreakCard from '@/src/components/StreakCard';
+import WeeklyRing from '@/src/components/WeeklyRing';
 
 export default function StudentHome() {
   const { user } = useAuth();
@@ -16,6 +18,7 @@ export default function StudentHome() {
 
   const stats = data?.mealStats;
   const pct = stats?.percentage ?? 0;
+  const gam = data?.gamification;
 
   return (
     <ScrollView
@@ -26,6 +29,24 @@ export default function StudentHome() {
       }
     >
       <H1>Hi, {user?.fullName?.split(' ')[0] ?? 'there'} 👋</H1>
+
+      {/* Gamification: Streaks + Weekly Ring */}
+      {gam?.streaks && (
+        <StreakCard
+          attendance={gam.streaks.attendance}
+          meals={gam.streaks.meals}
+          perfect={gam.streaks.perfect}
+        />
+      )}
+      {gam?.weeklyScore && (
+        <WeeklyRing
+          percentage={gam.weeklyScore.percentage}
+          daysPresent={gam.weeklyScore.daysPresent}
+          daysTotal={gam.weeklyScore.daysTotal}
+          mealsEaten={gam.weeklyScore.mealsEaten}
+          mealsTotal={gam.weeklyScore.mealsTotal}
+        />
+      )}
 
       <Card>
         <Muted>Room</Muted>

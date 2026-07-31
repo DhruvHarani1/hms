@@ -6,12 +6,14 @@ import {
   AuthUser,
 } from '../../common/decorators/current-user.decorator';
 import { MealsService } from '../meals/meals.service';
+import { GamificationService } from '../gamification/gamification.service';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(
     private prisma: PrismaService,
     private meals: MealsService,
+    private gamification: GamificationService,
   ) {}
 
   @Roles('warden', 'staff')
@@ -57,7 +59,7 @@ export class DashboardController {
   async student(@CurrentUser() user: AuthUser) {
     const hostelId = user.hostelId;
 
-    const [profile, mealStats, unread, openComplaints, latestNotices] =
+    const [profile, mealStats, unread, openComplaints, latestNotices, gamification] =
       await Promise.all([
         this.prisma.user.findUnique({
           where: { id: user.userId },
@@ -78,6 +80,7 @@ export class DashboardController {
           orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
           take: 5,
         }),
+        this.gamification.getStudentGamification(user.userId),
       ]);
 
     return {
@@ -92,6 +95,7 @@ export class DashboardController {
       unreadNotifications: unread,
       openComplaints,
       latestNotices,
+      gamification,
     };
   }
 }
