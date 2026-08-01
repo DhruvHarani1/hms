@@ -2,7 +2,7 @@
   "expo": {
     "name": "AIFDMS Hostel App",
     "slug": "hms-mobile",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "scheme": "hmsapp",
     "userInterfaceStyle": "automatic",

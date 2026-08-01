@@ -13,8 +13,8 @@ export class DownloadController {
   @Get('version')
   getVersion() {
     return {
-      latestVersion: process.env.APP_LATEST_VERSION || '2.0.0',
-      // Bumped to 2.0.0 — any app below this will see the "Update Required" screen
+      latestVersion: process.env.APP_LATEST_VERSION || '2.1.0',
+      // Bumped to 2.1.0 — any app below this will see the "Update Required" screen
       minRequiredVersion: process.env.APP_MIN_REQUIRED_VERSION || '2.0.0',
       // downloadUrl shown in the "Update Required" screen — points to website/download
       downloadUrl:
