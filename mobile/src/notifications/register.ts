@@ -36,7 +36,7 @@ export async function registerForPush(): Promise<void> {
       }),
     });
 
-    // Android needs a channel for heads-up (lock-screen) notifications.
+    // Android needs channels for heads-up (lock-screen) notifications.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Hostel alerts',
@@ -44,6 +44,16 @@ export async function registerForPush(): Promise<void> {
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#4f46e5',
         sound: 'default',
+      });
+
+      // Dedicated channel for meal-ready with custom sound 🍛
+      await Notifications.setNotificationChannelAsync('meal-ready', {
+        name: 'Meal Ready',
+        description: 'Plays a custom sound when lunch/dinner is ready',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4f46e5',
+        sound: 'meal_ready.mp3',
       });
     }
 

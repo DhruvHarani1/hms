@@ -43,6 +43,8 @@ export class NotificationsService {
       priority?: NotificationPriority;
       audience?: 'all' | 'individual';
       createdBy?: string;
+      channelId?: string;
+      sound?: string;
     },
   ) {
     if (userIds.length === 0) return { notificationId: null, notified: 0 };
@@ -70,6 +72,9 @@ export class NotificationsService {
       params.title,
       params.body,
       { notificationId: notification.id, type: params.type, ...params.data },
+      params.channelId || params.sound
+        ? { channelId: params.channelId, sound: params.sound }
+        : undefined,
     );
     await this.webPush.sendToUsers(userIds, {
       title: params.title,
@@ -91,6 +96,8 @@ export class NotificationsService {
       data?: Record<string, any>;
       priority?: NotificationPriority;
       createdBy?: string;
+      channelId?: string;
+      sound?: string;
     },
   ) {
     const users = await this.prisma.user.findMany({
@@ -127,6 +134,8 @@ export class NotificationsService {
     data?: Record<string, any>;
     priority?: NotificationPriority;
     createdBy?: string;
+    channelId?: string;
+    sound?: string;
   }) {
     return this.notifyRoles(['student', 'warden', 'staff', 'cook'], params);
   }
@@ -186,7 +195,7 @@ export class NotificationsService {
       },
     });
 
-    // Meal-ready → notify everyone (students + warden + cook).
+    // Meal-ready → notify everyone with custom sound 🍛
     return this.notifyEveryone({
       hostelId,
       type: 'meal',
@@ -195,6 +204,8 @@ export class NotificationsService {
       priority: 'high',
       createdBy: wardenId,
       data: { mealType },
+      channelId: 'meal-ready',
+      sound: 'meal_ready.mp3',
     });
   }
 

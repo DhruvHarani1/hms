@@ -16,6 +16,7 @@ export class PushService {
     title: string,
     body: string,
     data: Record<string, any> = {},
+    options?: { channelId?: string; sound?: string },
   ): Promise<void> {
     const validTokens = tokens.filter((t) => Expo.isExpoPushToken(t));
     const invalidCount = tokens.length - validTokens.length;
@@ -32,11 +33,12 @@ export class PushService {
 
     const messages: ExpoPushMessage[] = validTokens.map((to) => ({
       to,
-      sound: 'default',
+      sound: (options?.sound ?? 'default') as any,
       title,
       body,
       data,
       priority: 'high',
+      channelId: options?.channelId,
     }));
 
     const chunks = this.expo.chunkPushNotifications(messages);
