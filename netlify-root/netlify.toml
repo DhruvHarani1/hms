@@ -1,0 +1,47 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Proxy all /api/* requests to Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+# SPA fallback
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Attendance reminder — 10:30 AM IST = 05:00 UTC
+# Attendance reminder — 07:30 PM IST = 14:00 UTC
+[functions."attendance-reminder"]
+  schedule = "0 5,14 * * *"
+
+# Employee attendance reminder
+# 7:00 AM IST = 01:30 UTC, 7:30 PM IST = 14:00 UTC
+[functions."employee-reminder"]
+  schedule = "30 1 * * *"
+
+# Employee checkout reminder — 7:30 PM IST = 14:00 UTC
+[functions."employee-reminder-evening"]
+  schedule = "0 14 * * *"
+
+# Leave escalation — runs every 6 hours, escalates leaves pending > 48h
+[functions."leave-escalation"]
+  schedule = "0 */6 * * *"
+
+# HO Morning Digest — 7:00 AM IST = 01:30 UTC daily
+[functions."ho-digest"]
+  schedule = "30 1 * * *"
+
+# Bill/receipt reminder — 5:30 PM IST = 12:00 UTC, weekdays only
+# (weekend check is inside the function itself)
+[functions."bill-reminder"]
+  schedule = "0 12 * * 1-5"
+
+[functions."status-watcher"]
+  schedule = "*/15 * * * *"

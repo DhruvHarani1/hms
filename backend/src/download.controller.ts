@@ -5,7 +5,7 @@ import { Public } from './common/decorators/public.decorator';
 // Permanent download URL — update this after each new APK build
 const WEBSITE_URL = 'https://aifdms-hostel-app.netlify.app';
 const PERMANENT_GITHUB_APK_URL =
-  'https://expo.dev/artifacts/eas/-ZyVaN1IkvMXNLGY3F3K6EaLBKjZ75nIgx8aTKyWl6g.apk';
+  'https://expo.dev/artifacts/eas/BzN0Gdi1DXydZxBfpgdgbEZ3A6X8NIlTo72SZEB6Mcc.apk';
 
 @Public()
 @Controller('download')

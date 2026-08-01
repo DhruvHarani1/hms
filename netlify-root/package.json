@@ -1,0 +1,11 @@
+{
+  "name": "aig-pulse-portal",
+  "version": "1.0.0",
+  "description": "AIG Engineering Pulse Portal - Server-side proxy for Microsoft Graph API",
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}

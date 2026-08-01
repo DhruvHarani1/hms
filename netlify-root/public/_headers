@@ -1,0 +1,9 @@
+/*
+  X-Content-Type-Options: nosniff
+
+# HTML: always revalidate so new deploys are picked up, but allow cached copy while checking
+/index.html
+  Cache-Control: no-cache
+
+/
+  Cache-Control: no-cache
