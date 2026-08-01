@@ -185,6 +185,9 @@ export class GamificationService {
   }
 
   // ─── Badges ───
+  // IMPORTANT: badges are PERMANENT — once earned, never lost.
+  // So streak-based badges check historical max, not just current streak.
+  // Monthly badges check all completed months, not just current.
   async computeBadges(studentId: string) {
     const todayStr = this.todayIST();
     const today = this.parseDate(todayStr);
@@ -193,26 +196,25 @@ export class GamificationService {
 
     const [
       user,
-      lunchOptOuts,
-      dinnerOptOuts,
-      totalMealOptOuts,
+      // All meal opt-outs (to compute actual meals eaten)
+      allMealOptOuts,
       totalComplaints,
       resolvedComplaints,
       totalSplits,
       hasBudget,
       monthAbsences,
       monthMealOptOuts,
-      streaks,
+      currentStreaks,
     ] = await Promise.all([
       this.prisma.user.findUnique({ where: { id: studentId }, select: { createdAt: true } }),
-      this.prisma.mealAttendance.count({
-        where: { studentId, mealType: 'lunch', status: { in: ['absent', 'opted_out'] } },
-      }),
-      this.prisma.mealAttendance.count({
-        where: { studentId, mealType: 'dinner', status: { in: ['absent', 'opted_out'] } },
-      }),
-      this.prisma.mealAttendance.count({
-        where: { studentId, mealType: { in: ['lunch', 'dinner'] }, status: { in: ['absent', 'opted_out'] } },
+      this.prisma.mealAttendance.findMany({
+        where: {
+          studentId,
+          mealType: { in: ['lunch', 'dinner'] },
+          status: { in: ['absent', 'opted_out'] },
+          date: { lte: today },
+        },
+        select: { date: true, mealType: true },
       }),
       this.prisma.complaint.count({ where: { studentId } }),
       this.prisma.complaint.count({ where: { studentId, status: 'resolved' } }),
@@ -231,28 +233,52 @@ export class GamificationService {
     ]);
 
     const daysSinceJoin = user ? Math.floor((Date.now() - user.createdAt.getTime()) / 86400000) : 0;
+
+    // ── Count meals properly (same logic as monthData) ──
+    // Group opt-outs by date → which meals were skipped
+    const optOutsByDate = new Map<string, Set<string>>();
+    for (const r of allMealOptOuts) {
+      const d = r.date.toISOString().slice(0, 10);
+      if (!optOutsByDate.has(d)) optOutsByDate.set(d, new Set());
+      optOutsByDate.get(d)!.add(r.mealType);
+    }
+
+    // Count days where student ate at least one meal (lunch OR dinner not opted out)
+    // Default = eating. Only count as "not ate" if BOTH lunch AND dinner are opted out.
     const totalDays = Math.max(daysSinceJoin, 1);
+    let daysNotAte = 0;
+    let lunchSkipped = 0;
+    let dinnerSkipped = 0;
+    for (const [, skipped] of optOutsByDate) {
+      if (skipped.has('lunch')) lunchSkipped++;
+      if (skipped.has('dinner')) dinnerSkipped++;
+      if (skipped.has('lunch') && skipped.has('dinner')) daysNotAte++;
+    }
 
-    // Inverted: total possible - opt-outs = eaten
-    const totalLunchEaten = Math.max(0, totalDays - lunchOptOuts);
-    const totalDinnerEaten = Math.max(0, totalDays - dinnerOptOuts);
-    const totalMealsEaten = Math.max(0, (totalDays * 2) - totalMealOptOuts);
+    const totalDaysAte = Math.max(0, totalDays - daysNotAte);
+    const totalLunchEaten = Math.max(0, totalDays - lunchSkipped);
+    const totalDinnerEaten = Math.max(0, totalDays - dinnerSkipped);
+    const totalMealsEaten = totalLunchEaten + totalDinnerEaten;
 
+    // ── Historical max streaks (for permanent badges) ──
+    const maxStreaks = await this.computeMaxStreaks(studentId);
+
+    // ── Monthly badges: check current month ──
     const monthAttendancePct = dayOfMonth > 0 ? ((dayOfMonth - monthAbsences) / dayOfMonth) * 100 : 0;
     const monthMealsEaten = (dayOfMonth * 2) - monthMealOptOuts;
     const monthMealPct = dayOfMonth > 0 ? (monthMealsEaten / (dayOfMonth * 2)) * 100 : 0;
 
     const checks: Record<string, boolean> = {
-      first_bite:        totalMealsEaten >= 1,
-      breakfast_person:  totalMealsEaten >= 10,
+      first_bite:        totalDaysAte >= 1,
+      breakfast_person:  totalDaysAte >= 10,
       lunch_regular:     totalLunchEaten >= 30,
       dinner_fan:        totalDinnerEaten >= 30,
       iron_stomach:      totalMealsEaten >= 50,
-      foodie_week:       streaks.meals.current >= 7,
+      foodie_week:       maxStreaks.meal >= 7,       // historical max, not current
       meal_machine:      monthMealPct >= 90,
-      home_body:         streaks.attendance.current >= 7,
-      month_resident:    streaks.attendance.current >= 30,
-      century_club:      streaks.attendance.current >= 100,
+      home_body:         maxStreaks.attendance >= 7,  // historical max
+      month_resident:    maxStreaks.attendance >= 30,
+      century_club:      maxStreaks.attendance >= 100,
       always_here:       monthAttendancePct >= 95,
       first_voice:       totalComplaints >= 1,
       problem_solver:    resolvedComplaints >= 3,
@@ -276,6 +302,72 @@ export class GamificationService {
     }
 
     return { earned, locked, total: BADGE_DEFS.length, earnedCount: earned.length };
+  }
+
+  // ─── Historical max streaks (walks full history for permanent badges) ───
+  private async computeMaxStreaks(studentId: string) {
+    const todayStr = this.todayIST();
+    const today = this.parseDate(todayStr);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: studentId },
+      select: { createdAt: true },
+    });
+    const joinDate = user
+      ? new Date(Date.UTC(user.createdAt.getUTCFullYear(), user.createdAt.getUTCMonth(), user.createdAt.getUTCDate()))
+      : yesterday;
+
+    const totalDays = Math.max(1, Math.floor((yesterday.getTime() - joinDate.getTime()) / 86400000) + 1);
+
+    const [absences, mealOptOuts] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where: { studentId, date: { gte: joinDate, lte: yesterday } },
+        select: { date: true },
+      }),
+      this.prisma.mealAttendance.findMany({
+        where: {
+          studentId,
+          date: { gte: joinDate, lte: yesterday },
+          mealType: { in: ['lunch', 'dinner'] },
+          status: { in: ['absent', 'opted_out'] },
+        },
+        select: { date: true, mealType: true },
+      }),
+    ]);
+
+    const absentDates = new Set(absences.map((a) => a.date.toISOString().slice(0, 10)));
+    const skippedByDate = new Map<string, Set<string>>();
+    for (const m of mealOptOuts) {
+      const d = m.date.toISOString().slice(0, 10);
+      if (!skippedByDate.has(d)) skippedByDate.set(d, new Set());
+      skippedByDate.get(d)!.add(m.mealType);
+    }
+
+    let maxAttendance = 0, curAttendance = 0;
+    let maxMeal = 0, curMeal = 0;
+    let maxPerfect = 0, curPerfect = 0;
+
+    const cursor = new Date(joinDate);
+    for (let i = 0; i < totalDays; i++) {
+      const dateStr = cursor.toISOString().slice(0, 10);
+      const isPresent = !absentDates.has(dateStr);
+      const skipped = skippedByDate.get(dateStr) ?? new Set();
+      const ateMeal = !skipped.has('lunch') || !skipped.has('dinner');
+
+      curAttendance = isPresent ? curAttendance + 1 : 0;
+      curMeal = ateMeal ? curMeal + 1 : 0;
+      curPerfect = (isPresent && ateMeal) ? curPerfect + 1 : 0;
+
+      if (curAttendance > maxAttendance) maxAttendance = curAttendance;
+      if (curMeal > maxMeal) maxMeal = curMeal;
+      if (curPerfect > maxPerfect) maxPerfect = curPerfect;
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return { attendance: maxAttendance, meal: maxMeal, perfect: maxPerfect };
   }
 
   // ─── Full payload ───
