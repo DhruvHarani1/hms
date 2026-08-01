@@ -116,16 +116,17 @@ export class GamificationService {
       const dateStr = cursor.toISOString().slice(0, 10);
       const isPresent = !absentDates.has(dateStr);
       const skipped = skippedByDate.get(dateStr) ?? new Set();
-      const ateAllMeals = !skipped.has('lunch') && !skipped.has('dinner');
+      // Ate at least one meal (lunch OR dinner) — matches the calendar's green-day logic
+      const ateMeal = !skipped.has('lunch') || !skipped.has('dinner');
 
       if (i === 0 || attendanceStreak === i) {
         if (isPresent) attendanceStreak = i + 1;
       }
       if (i === 0 || mealStreak === i) {
-        if (ateAllMeals) mealStreak = i + 1;
+        if (ateMeal) mealStreak = i + 1;
       }
       if (i === 0 || perfectStreak === i) {
-        if (isPresent && ateAllMeals) perfectStreak = i + 1;
+        if (isPresent && ateMeal) perfectStreak = i + 1;
       }
 
       cursor.setDate(cursor.getDate() - 1);
