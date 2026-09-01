@@ -19,11 +19,13 @@ import {
   SkeletonList,
 } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
+import MonthSelector, { currentMonth } from '@/src/components/MonthSelector';
 
 export default function MealStudents() {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [month, setMonth] = useState(currentMonth);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['warden-meal-students', q],
@@ -34,9 +36,9 @@ export default function MealStudents() {
   async function handleExportExcel() {
     setExporting(true);
     try {
-      const res = await api.post('/meals/export-link');
+      const res = await api.post('/meals/export-link', { month });
       const token = res.data.token;
-      const downloadUrl = `${API_URL}/meals/export?token=${token}`;
+      const downloadUrl = `${API_URL}/meals/export?token=${token}&month=${month}`;
       await Linking.openURL(downloadUrl);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.response?.data?.message ?? 'Could not export Excel file.');
@@ -48,8 +50,9 @@ export default function MealStudents() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ padding: 16, gap: 10 }}>
+        <MonthSelector selected={month} onChange={setMonth} />
         <Button
-          title={exporting ? 'Generating Excel...' : '📊  Export Meals Excel (.xlsx)'}
+          title={exporting ? 'Generating Excel...' : `📊  Export Meals Excel (.xlsx)`}
           onPress={handleExportExcel}
           disabled={exporting}
           variant="outline"

@@ -15,11 +15,13 @@ import { API_URL } from '@/src/lib/config';
 import { Button, Card, Muted } from '@/src/components/ui';
 import { EmptyState, ErrorState, SkeletonList } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
+import MonthSelector, { currentMonth } from '@/src/components/MonthSelector';
 
 export default function AttendanceStudents() {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [exporting, setExporting] = useState(false);
+  const [month, setMonth] = useState(currentMonth);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['warden-attendance-students', q],
@@ -29,9 +31,9 @@ export default function AttendanceStudents() {
   async function handleExportExcel() {
     setExporting(true);
     try {
-      const res = await api.post('/attendance/export-link');
+      const res = await api.post('/attendance/export-link', { month });
       const token = res.data.token;
-      const downloadUrl = `${API_URL}/attendance/export?token=${token}`;
+      const downloadUrl = `${API_URL}/attendance/export?token=${token}&month=${month}`;
       await Linking.openURL(downloadUrl);
     } catch (e: any) {
       Alert.alert('Export Failed', e?.response?.data?.message ?? 'Could not export Excel file.');
@@ -43,6 +45,7 @@ export default function AttendanceStudents() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ padding: 16, gap: 10 }}>
+        <MonthSelector selected={month} onChange={setMonth} />
         <Button
           title={exporting ? 'Generating Excel...' : '📊  Export Attendance Excel (.xlsx)'}
           onPress={handleExportExcel}
