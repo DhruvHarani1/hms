@@ -27,6 +27,19 @@ export class ComplaintsService {
     return this.prisma.complaintCategory.findMany({ where: { hostelId } });
   }
 
+  async assignees(hostelId: string) {
+    return this.prisma.user.findMany({
+      where: {
+        hostelId,
+        role: { in: ['warden', 'staff'] },
+        status: 'active',
+        deletedAt: null,
+      },
+      select: { id: true, fullName: true, role: true },
+      orderBy: { fullName: 'asc' },
+    });
+  }
+
   async create(user: AuthUser, dto: CreateComplaintDto) {
     let priority: any = 'medium';
     if (dto.categoryId) {
@@ -100,6 +113,9 @@ export class ComplaintsService {
             email: true,
           },
         },
+        assignee: {
+          select: { id: true, fullName: true },
+        },
         attachments: true,
         _count: { select: { replies: true, upvotes: true } },
         upvotes: {
@@ -137,6 +153,7 @@ export class ComplaintsService {
         category: true,
         attachments: true,
         student: { select: { id: true, fullName: true, email: true } },
+        assignee: { select: { id: true, fullName: true } },
         replies: {
           include: { author: { select: { id: true, fullName: true, role: true } } },
           orderBy: { createdAt: 'asc' },

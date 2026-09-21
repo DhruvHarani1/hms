@@ -50,6 +50,11 @@ export default function WardenMore() {
         variant="outline"
         onPress={() => router.push('/(warden)/notices')}
       />
+      <Button
+        title="📊  Analytics"
+        variant="outline"
+        onPress={() => router.push('/(warden)/analytics')}
+      />
 
       <Button title="Log out" variant="danger" onPress={logout} />
     </ScrollView>

@@ -27,3 +27,10 @@ export const statusColor: Record<string, string> = {
   resolved: colors.success,
   closed: colors.muted,
 };
+
+export const priorityColor: Record<string, string> = {
+  low: colors.muted,
+  medium: colors.primary,
+  high: colors.warning,
+  urgent: colors.danger,
+};

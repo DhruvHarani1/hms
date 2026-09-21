@@ -28,6 +28,12 @@ export class ComplaintsController {
     return this.service.categories(user.hostelId);
   }
 
+  @Roles('warden', 'staff')
+  @Get('complaints/assignees')
+  assignees(@CurrentUser() user: AuthUser) {
+    return this.service.assignees(user.hostelId);
+  }
+
   @Post('complaints')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateComplaintDto) {
     return this.service.create(user, dto);

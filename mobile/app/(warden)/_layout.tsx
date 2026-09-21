@@ -96,6 +96,7 @@ export default function WardenLayout() {
       <Tabs.Screen name="meal-reviews" options={{ href: null }} />
       <Tabs.Screen name="menu" options={{ href: null }} />
       <Tabs.Screen name="notices" options={{ href: null }} />
+      <Tabs.Screen name="analytics" options={{ href: null }} />
       <Tabs.Screen name="chat" options={{ href: null }} />
       <Tabs.Screen name="chat/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
