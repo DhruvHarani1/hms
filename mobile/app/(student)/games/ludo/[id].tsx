@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Image, Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGameRoom } from '@/src/hooks/useGameRoom';
@@ -6,9 +7,11 @@ import { useLocalGameHost, useLocalGameClient, useBotGameRoom } from '@/src/hook
 import { useAuth } from '@/src/stores/auth';
 import { LudoBoard } from '@/src/components/LudoBoard';
 import { LocalHostQr } from '@/src/components/LocalHostQr';
+import { Confetti } from '@/src/components/Confetti';
 import { Button } from '@/src/components/ui';
 import { ErrorState } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
+import { playSound } from '@/src/lib/gameSounds';
 
 const COLOR_HEX: Record<string, string> = {
   red: '#e6392b',
@@ -17,7 +20,14 @@ const COLOR_HEX: Record<string, string> = {
   blue: '#1b6ec2',
 };
 
-const DICE_FACES: Record<number, string> = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
+const DICE_IMAGES: Record<number, any> = {
+  1: require('../../../../assets/games/dice/dice-1.png'),
+  2: require('../../../../assets/games/dice/dice-2.png'),
+  3: require('../../../../assets/games/dice/dice-3.png'),
+  4: require('../../../../assets/games/dice/dice-4.png'),
+  5: require('../../../../assets/games/dice/dice-5.png'),
+  6: require('../../../../assets/games/dice/dice-6.png'),
+};
 
 export default function LudoGame() {
   const { id, role, ip, port, bots } = useLocalSearchParams<{ id: string; role?: string; ip?: string; port?: string; bots?: string }>();
@@ -38,11 +48,60 @@ export default function LudoGame() {
   const active = isBot ? botGame : isLocalHost ? localHost : isLocalClient ? localClient : online;
   const { room, loading, error, acting, startGame, makeMove, leaveRoom } = active;
   const connInfo = isLocalHost ? localHost.connInfo : null;
+  const state = room?.state;
+
+  // ── Dice roll animation state (must be unconditional — before any early return) ──
+  const [isRolling, setIsRolling] = useState(false);
+  const [displayFace, setDisplayFace] = useState(1);
+  const spin = useRef(new Animated.Value(0)).current;
+  const prevLogRef = useRef<string | undefined>(undefined);
+  const prevStatusRef = useRef<string | undefined>(undefined);
+
+  // Reactively play move/capture/win sounds whenever the shared game log advances.
+  useEffect(() => {
+    const latest = state?.log?.[0];
+    if (latest && latest !== prevLogRef.current) {
+      if (prevLogRef.current !== undefined) {
+        if (latest.includes('Captured')) playSound('capture');
+        else if (latest.includes('moved a token')) playSound('tokenMove');
+      }
+      prevLogRef.current = latest;
+    }
+  }, [state?.log?.[0]]);
+
+  useEffect(() => {
+    if (room?.status === 'finished' && prevStatusRef.current !== 'finished') {
+      playSound('win');
+    }
+    prevStatusRef.current = room?.status;
+  }, [room?.status]);
 
   async function handleLeave() {
     await leaveRoom();
     qc.invalidateQueries({ queryKey: ['game-rooms'] });
     router.replace('/(student)/games');
+  }
+
+  async function handleRoll() {
+    setIsRolling(true);
+    playSound('diceRoll');
+    Animated.loop(Animated.timing(spin, { toValue: 1, duration: 250, useNativeDriver: true })).start();
+    const rollInterval = setInterval(() => setDisplayFace(1 + Math.floor(Math.random() * 6)), 90);
+    try {
+      await Promise.all([makeMove('roll'), new Promise((res) => setTimeout(res, 550))]);
+    } catch {
+    } finally {
+      clearInterval(rollInterval);
+      spin.stopAnimation();
+      spin.setValue(0);
+      setIsRolling(false);
+    }
+  }
+
+  async function handleTokenPress(tokenIndex: number) {
+    try {
+      await makeMove('move', { tokenIndex });
+    } catch {}
   }
 
   if (loading && !room) {
@@ -54,8 +113,6 @@ export default function LudoGame() {
   }
   if (error && !room) return <ErrorState onRetry={() => {}} />;
   if (!room) return null;
-
-  const state = room.state;
 
   // ── Waiting room ──
   if (room.status === 'waiting') {
@@ -115,6 +172,7 @@ export default function LudoGame() {
     const winner = state?.players?.find((p: any) => p.userId === state?.winnerUserId);
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 24, gap: 16 }}>
+        {winner?.userId === user?.id && <Confetti />}
         <Text style={{ fontSize: 60 }}>{winner?.userId === user?.id ? '🏆' : '🎲'}</Text>
         <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center' }}>
           {winner ? `${winner.name} (${winner.color}) wins!` : 'Game over'}
@@ -128,18 +186,8 @@ export default function LudoGame() {
   const myTurn = room.currentTurnUserId === user?.id;
   const me = state.players.find((p: any) => p.userId === user?.id);
   const currentPlayer = state.players[state.currentPlayerIndex];
-
-  async function handleRoll() {
-    try {
-      await makeMove('roll');
-    } catch {}
-  }
-
-  async function handleTokenPress(tokenIndex: number) {
-    try {
-      await makeMove('move', { tokenIndex });
-    } catch {}
-  }
+  const shownFace = isRolling ? displayFace : state.diceValue;
+  const spinDeg = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -195,25 +243,30 @@ export default function LudoGame() {
         </Text>
 
         {myTurn && state.turnPhase === 'roll' && (
-          <Pressable
-            onPress={handleRoll}
-            disabled={acting}
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              borderWidth: 2,
-              borderColor: COLOR_HEX[me?.color ?? 'red'],
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text style={{ fontSize: 36 }}>{state.diceValue ? DICE_FACES[state.diceValue] : '🎲'}</Text>
+          <Pressable onPress={handleRoll} disabled={acting || isRolling}>
+            <Animated.View
+              style={{
+                width: 68,
+                height: 68,
+                borderRadius: 14,
+                backgroundColor: colors.card,
+                borderWidth: 2,
+                borderColor: COLOR_HEX[me?.color ?? 'red'],
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ rotate: spinDeg }],
+              }}
+            >
+              <Image
+                source={DICE_IMAGES[shownFace ?? 1]}
+                style={{ width: 48, height: 48 }}
+                resizeMode="contain"
+              />
+            </Animated.View>
           </Pressable>
         )}
         {state.diceValue && state.turnPhase === 'move' && (
-          <Text style={{ fontSize: 40 }}>{DICE_FACES[state.diceValue]}</Text>
+          <Image source={DICE_IMAGES[state.diceValue]} style={{ width: 52, height: 52 }} resizeMode="contain" />
         )}
       </View>
     </View>

@@ -1,8 +1,10 @@
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Image, Pressable, Text, View } from 'react-native';
 
-const CELL = 20;
+const CELL = 22;
 const GRID = 15;
 const BOARD = CELL * GRID;
+const TOKEN_SIZE = 20;
 
 const COLOR_HEX: Record<string, string> = {
   red: '#e6392b',
@@ -11,6 +13,13 @@ const COLOR_HEX: Record<string, string> = {
   blue: '#1b6ec2',
 };
 const COLOR_ORDER = ['red', 'green', 'yellow', 'blue'] as const;
+
+const TOKEN_IMAGES: Record<string, any> = {
+  red: require('../../assets/games/ludo/token-red.png'),
+  green: require('../../assets/games/ludo/token-green.png'),
+  yellow: require('../../assets/games/ludo/token-yellow.png'),
+  blue: require('../../assets/games/ludo/token-blue.png'),
+};
 
 type RC = [number, number];
 
@@ -75,6 +84,81 @@ function style(r: number, c: number, extra?: object) {
   return { position: 'absolute' as const, left: c * CELL, top: r * CELL, width: CELL, height: CELL, ...extra };
 }
 
+function AnimatedToken({
+  color,
+  left,
+  top,
+  canMove,
+  isFinished,
+  onPress,
+}: {
+  color: string;
+  left: number;
+  top: number;
+  canMove: boolean;
+  isFinished: boolean;
+  onPress: () => void;
+}) {
+  const pos = useRef(new Animated.ValueXY({ x: left, y: top })).current;
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.spring(pos, {
+      toValue: { x: left, y: top },
+      useNativeDriver: false,
+      friction: 7,
+      tension: 60,
+    }).start();
+  }, [left, top]);
+
+  useEffect(() => {
+    if (!canMove) {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.25, duration: 500, useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 1, duration: 500, useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [canMove]);
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        left: pos.x,
+        top: pos.y,
+        width: TOKEN_SIZE,
+        height: TOKEN_SIZE,
+        transform: [{ scale: pulse }],
+        zIndex: canMove ? 10 : 1,
+      }}
+    >
+      <Pressable
+        disabled={!canMove}
+        onPress={onPress}
+        style={{
+          width: '100%',
+          height: '100%',
+          shadowColor: canMove ? '#ffd700' : '#000',
+          shadowOpacity: canMove ? 0.9 : 0.3,
+          shadowRadius: canMove ? 5 : 2,
+          shadowOffset: { width: 0, height: 1 },
+        }}
+      >
+        <Image source={TOKEN_IMAGES[color]} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+        {isFinished && (
+          <Text style={{ position: 'absolute', top: -14, left: 2, fontSize: 10 }}>⭐</Text>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export function LudoBoard({
   players,
   legalMoveTokens,
@@ -87,7 +171,7 @@ export function LudoBoard({
   onTokenPress: (tokenIndex: number) => void;
 }) {
   // Group tokens sitting on the exact same visual cell so we can offset them slightly.
-  const tokenCells: { color: string; tokenIndex: number; isMine: boolean; r: number; c: number }[] = [];
+  const tokenCells: { color: string; tokenIndex: number; isMine: boolean; r: number; c: number; pos: number }[] = [];
   for (const p of players) {
     p.tokens.forEach((pos, i) => {
       let rc: RC;
@@ -96,25 +180,25 @@ export function LudoBoard({
       } else {
         rc = cellRC(p.color, pos);
       }
-      tokenCells.push({ color: p.color, tokenIndex: i, isMine: p.color === currentPlayerColor, r: rc[0], c: rc[1] });
+      tokenCells.push({ color: p.color, tokenIndex: i, isMine: p.color === currentPlayerColor, r: rc[0], c: rc[1], pos });
     });
   }
 
   return (
-    <View style={{ width: BOARD, height: BOARD, backgroundColor: '#fff', borderRadius: 8, borderWidth: 2, borderColor: '#333' }}>
+    <View style={{ width: BOARD, height: BOARD, backgroundColor: '#fdf6e3', borderRadius: 10, borderWidth: 3, borderColor: '#5b4636' }}>
       {/* Yard quadrants */}
       {COLOR_ORDER.map((color) => {
         const [r, c] = YARD_BLOCK[color];
         return (
-          <View key={color} style={style(r, c, { width: CELL * 6, height: CELL * 6, backgroundColor: COLOR_HEX[color] })}>
-            <View style={{ position: 'absolute', left: CELL * 0.5, top: CELL * 0.5, width: CELL * 5, height: CELL * 5, backgroundColor: '#fff', borderRadius: 8 }} />
+          <View key={color} style={style(r, c, { width: CELL * 6, height: CELL * 6, backgroundColor: COLOR_HEX[color], borderRadius: 6 })}>
+            <View style={{ position: 'absolute', left: CELL * 0.6, top: CELL * 0.6, width: CELL * 4.8, height: CELL * 4.8, backgroundColor: '#fff', borderRadius: 10 }} />
           </View>
         );
       })}
 
       {/* Shared path cells */}
       {ABS_PATH.map(([r, c], i) => (
-        <View key={`p${i}`} style={style(r, c, { backgroundColor: '#fff', borderWidth: 0.5, borderColor: '#ddd' })} />
+        <View key={`p${i}`} style={style(r, c, { backgroundColor: '#fff', borderWidth: 0.5, borderColor: '#e5dcc3' })} />
       ))}
 
       {/* Color each color's entry cell + home stretch */}
@@ -132,43 +216,26 @@ export function LudoBoard({
       )}
 
       {/* Center home */}
-      <View style={style(6, 6, { width: CELL * 3, height: CELL * 3, backgroundColor: '#333', alignItems: 'center', justifyContent: 'center' })}>
-        <Text style={{ fontSize: 16 }}>🏠</Text>
+      <View style={style(6, 6, { width: CELL * 3, height: CELL * 3, backgroundColor: '#5b4636', alignItems: 'center', justifyContent: 'center', borderRadius: 4 })}>
+        <Text style={{ fontSize: 18 }}>🏠</Text>
       </View>
 
       {/* Tokens */}
-      {tokenCells.map((t, idx) => {
+      {tokenCells.map((t) => {
         const sameSpot = tokenCells.filter((o) => o.r === t.r && o.c === t.c);
         const spotIdx = sameSpot.indexOf(t);
-        const nudge = sameSpot.length > 1 ? (spotIdx - (sameSpot.length - 1) / 2) * 6 : 0;
+        const nudge = sameSpot.length > 1 ? (spotIdx - (sameSpot.length - 1) / 2) * 8 : 0;
         const canMove = t.isMine && legalMoveTokens.includes(t.tokenIndex);
-        const player = players.find((p) => p.color === t.color);
-        const posValue = player?.tokens[t.tokenIndex] ?? -1;
         return (
-          <Pressable
+          <AnimatedToken
             key={`${t.color}-${t.tokenIndex}`}
-            disabled={!canMove}
+            color={t.color}
+            left={t.c * CELL + CELL / 2 - TOKEN_SIZE / 2 + nudge}
+            top={t.r * CELL + CELL / 2 - TOKEN_SIZE / 2}
+            canMove={canMove}
+            isFinished={t.pos === 57}
             onPress={() => onTokenPress(t.tokenIndex)}
-            style={{
-              position: 'absolute',
-              left: t.c * CELL + CELL / 2 - 7 + nudge,
-              top: t.r * CELL + CELL / 2 - 7,
-              width: 14,
-              height: 14,
-              borderRadius: 7,
-              backgroundColor: COLOR_HEX[t.color],
-              borderWidth: 2,
-              borderColor: canMove ? '#fff' : '#00000055',
-              zIndex: canMove ? 10 : 1,
-              shadowColor: canMove ? '#fff' : undefined,
-              shadowOpacity: canMove ? 0.9 : 0,
-              shadowRadius: canMove ? 4 : 0,
-            }}
-          >
-            {posValue === 57 && (
-              <Text style={{ position: 'absolute', top: -14, left: -4, fontSize: 10 }}>⭐</Text>
-            )}
-          </Pressable>
+          />
         );
       })}
     </View>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "AIFDMS Hostel App",
     "slug": "hms-mobile",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "orientation": "portrait",
     "scheme": "hmsapp",
     "userInterfaceStyle": "automatic",
@@ -68,7 +68,8 @@
         {
           "cameraPermission": "Allow AIFDMS to use your camera to scan a local-game QR code."
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "extra": {
       "apiUrl": "https://hms-api-47qf.onrender.com/api/v1",
