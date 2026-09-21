@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, Stack } from 'expo-router';
+import * as Network from 'expo-network';
 import { api } from '@/src/lib/api';
 import { useAuth } from '@/src/stores/auth';
 import { useLocalGameDiscovery } from '@/src/hooks/useLocalGameDiscovery';
+import { isLikelyLanIp } from '@/src/lib/localGame/constants';
 import { Button, Card, Muted } from '@/src/components/ui';
 import { EmptyState, ErrorState, SkeletonList } from '@/src/components/primitives';
 import { colors, radius } from '@/src/lib/theme';
@@ -31,6 +33,18 @@ export default function GamesLobby() {
   function startBotGame(gameType: 'uno' | 'ludo', botCount: number) {
     setBotPicker(null);
     router.push(`/(student)/games/${gameType}/bot?bots=${botCount}` as any);
+  }
+
+  async function hostLocalGame(gameType: 'uno' | 'ludo') {
+    const ip = await Network.getIpAddressAsync().catch(() => null);
+    if (!isLikelyLanIp(ip)) {
+      Alert.alert(
+        'No local network',
+        'Turn on WiFi or your phone hotspot first — hosting needs a local network for other phones to connect to.',
+      );
+      return;
+    }
+    router.push(`/(student)/games/${gameType}/local?role=host` as any);
   }
 
   const { data: rooms, isLoading, isError, refetch } = useQuery({
@@ -148,16 +162,8 @@ export default function GamesLobby() {
                 Play with people on the same WiFi network — nothing goes through the server.
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Button
-                  title="🃏 Host UNO"
-                  variant="outline"
-                  onPress={() => router.push('/(student)/games/uno/local?role=host' as any)}
-                />
-                <Button
-                  title="🎲 Host Ludo"
-                  variant="outline"
-                  onPress={() => router.push('/(student)/games/ludo/local?role=host' as any)}
-                />
+                <Button title="🃏 Host UNO" variant="outline" onPress={() => hostLocalGame('uno')} />
+                <Button title="🎲 Host Ludo" variant="outline" onPress={() => hostLocalGame('ludo')} />
               </View>
               <Button title="📷 Scan to Join" onPress={() => router.push('/(student)/games/scan' as any)} />
 

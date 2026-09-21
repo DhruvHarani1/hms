@@ -2,7 +2,7 @@ import TcpSockets from 'react-native-tcp-socket';
 import dgram from 'react-native-udp';
 import * as Network from 'expo-network';
 import { createInitialState, applyMove, redactForViewer, currentTurnUserId, GameType } from '../gameEngines/dispatch';
-import { GAME_TCP_PORT, DISCOVERY_UDP_PORT, DISCOVERY_PROTO, DISCOVERY_BROADCAST_INTERVAL_MS } from './constants';
+import { GAME_TCP_PORT, DISCOVERY_UDP_PORT, DISCOVERY_PROTO, DISCOVERY_BROADCAST_INTERVAL_MS, isLikelyLanIp } from './constants';
 
 const PORT = GAME_TCP_PORT;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -56,6 +56,9 @@ export class LocalGameHost {
 
   async start(): Promise<{ ip: string; port: number; code: string }> {
     this.ip = await Network.getIpAddressAsync();
+    if (!isLikelyLanIp(this.ip)) {
+      throw new Error('Turn on WiFi or your phone hotspot first — no local network detected.');
+    }
     await new Promise<void>((resolve, reject) => {
       this.server = TcpSockets.createServer((socket: any) => this.handleConnection(socket));
       this.server.on('error', (e: Error) => reject(e));
