@@ -12,7 +12,9 @@
 export type LudoColor = 'red' | 'green' | 'yellow' | 'blue';
 const COLOR_ORDER: LudoColor[] = ['red', 'green', 'yellow', 'blue'];
 const START_OFFSET: Record<LudoColor, number> = { red: 0, green: 13, yellow: 26, blue: 39 };
-const SAFE_ABSOLUTE_CELLS = new Set([0, 13, 26, 39]);
+// Safe cells: each color's entry cell (0,13,26,39) plus the classic "star"
+// cell 8 steps into each arm (8,21,34,47) — tokens here can't be captured.
+const SAFE_ABSOLUTE_CELLS = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
 const PATH_LENGTH = 51; // relative 0..50 are on the shared path
 const HOME_STRETCH_END = 57;
 
@@ -125,16 +127,17 @@ export function moveToken(state: LudoState, userId: string, tokenIndex: number):
   let captured = false;
   const abs = relativeToAbsolute(player.color, to);
   if (abs !== null && !SAFE_ABSOLUTE_CELLS.has(abs)) {
+    // A cell held by 2+ of the same opponent color is a "block" — protected
+    // from capture, same as real Ludo. Only a lone opponent token gets sent home.
     for (const opp of s.players) {
       if (opp.userId === player.userId) continue;
-      opp.tokens.forEach((oppPos, i) => {
-        if (oppPos === -1 || oppPos === HOME_STRETCH_END) return;
-        const oppAbs = relativeToAbsolute(opp.color, oppPos);
-        if (oppAbs === abs) {
-          opp.tokens[i] = -1;
-          captured = true;
-        }
-      });
+      const occupying = opp.tokens
+        .map((oppPos, i) => ({ i, oppPos }))
+        .filter(({ oppPos }) => oppPos !== -1 && oppPos !== HOME_STRETCH_END && relativeToAbsolute(opp.color, oppPos) === abs);
+      if (occupying.length === 1) {
+        opp.tokens[occupying[0].i] = -1;
+        captured = true;
+      }
     }
   }
 

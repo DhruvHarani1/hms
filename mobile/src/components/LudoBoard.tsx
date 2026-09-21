@@ -301,6 +301,17 @@ export function LudoBoard({
           <View key={`entry-${color}`} style={style(er, ec, { backgroundColor: COLOR_HEX[color] + '55' })} />
         );
       })}
+
+      {/* Star safe cells (8 steps into each arm) — tokens here can't be captured */}
+      {COLOR_ORDER.map((color) => {
+        const starIdx = COLOR_ORDER.indexOf(color) * 13 + 8;
+        const [sr, sc] = ABS_PATH[starIdx];
+        return (
+          <View key={`star-${color}`} style={style(sr, sc, { alignItems: 'center', justifyContent: 'center' })}>
+            <Text style={{ fontSize: 11, color: '#c9a227' }}>★</Text>
+          </View>
+        );
+      })}
       {COLOR_ORDER.map((color) =>
         HOME_STRETCH[color].map(([r, c], i) => (
           <View key={`${color}-hs-${i}`} style={style(r, c, { backgroundColor: COLOR_HEX[color] })} />
