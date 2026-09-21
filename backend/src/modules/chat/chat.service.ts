@@ -317,6 +317,36 @@ export class ChatService {
     };
   }
 
+  /** Delete a message. Sender can delete their own; warden/staff can delete any in their hostel. */
+  async deleteMessage(
+    conversationId: string,
+    messageId: string,
+    userId: string,
+    hostelId: string,
+    role: string,
+  ) {
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, conversationId },
+      include: { conversation: { select: { hostelId: true } } },
+    });
+    if (!message) throw new NotFoundException('Message not found.');
+    if (message.conversation.hostelId !== hostelId) {
+      throw new ForbiddenException('Not your hostel.');
+    }
+
+    const isOwner = message.senderId === userId;
+    const isModerator = ['warden', 'staff', 'super_admin'].includes(role);
+    if (!isOwner && !isModerator) {
+      throw new ForbiddenException('You can only delete your own messages.');
+    }
+
+    if (message.type === 'image' && this.uploads.isConfigured()) {
+      await this.uploads.deleteImages([message.content]);
+    }
+    await this.prisma.message.delete({ where: { id: messageId } });
+    return { success: true };
+  }
+
   /** Mark conversation as read. */
   async markRead(conversationId: string, userId: string) {
     await this.prisma.conversationMember.update({

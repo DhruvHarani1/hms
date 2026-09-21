@@ -294,6 +294,9 @@ export class AuthService {
       .catch((e) => this.mailError(e));
   }
 
+  private static readonly MAX_LOGIN_ATTEMPTS = 5;
+  private static readonly LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 min
+
   async login(dto: LoginDto, req?: Request) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -302,9 +305,42 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+      throw new HttpException(
+        `Too many failed attempts. Try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const valid = await argon2.verify(user.passwordHash, dto.password);
     if (!valid) {
+      const attempts = user.failedLoginAttempts + 1;
+      const lockingOut = attempts >= AuthService.MAX_LOGIN_ATTEMPTS;
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: lockingOut ? 0 : attempts,
+          lockedUntil: lockingOut
+            ? new Date(Date.now() + AuthService.LOCKOUT_DURATION_MS)
+            : null,
+        },
+      });
+      if (lockingOut) {
+        throw new HttpException(
+          `Too many failed attempts. Account locked for 15 minutes.`,
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // Reset lockout state on a successful password check.
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
     }
 
     // Email verification guard for student and cook accounts

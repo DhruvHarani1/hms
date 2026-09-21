@@ -6,6 +6,7 @@ import {
   getCachedConversations,
   setCachedConversations,
   getCachedMessages,
+  setCachedMessages,
   appendCachedMessages,
   getLastCachedMessageId,
   cacheImage,
@@ -179,7 +180,21 @@ export function useChatMessages(conversationId: string | undefined) {
     [conversationId],
   );
 
-  return { messages, loading, sendMessage };
+  // Delete a message (sender's own, or warden/staff moderation).
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!conversationId) return;
+      await api.delete(`/chat/conversations/${conversationId}/messages/${messageId}`);
+      setMessages((prev) => {
+        const updated = prev.filter((m) => m.id !== messageId);
+        setCachedMessages(conversationId, updated);
+        return updated;
+      });
+    },
+    [conversationId],
+  );
+
+  return { messages, loading, sendMessage, deleteMessage };
 }
 
 // ─── Unread badge hook (lightweight, for header icon) ──────────────────

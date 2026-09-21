@@ -6,7 +6,7 @@ export function useUnread() {
   const { data } = useQuery({
     queryKey: ['unread'],
     queryFn: async () => (await api.get('/notifications/unread-count')).data,
-    refetchInterval: 20000, // light poll so the badge stays fresh
+    refetchInterval: 60000, // light poll so the badge stays fresh
   });
   return data?.unread ?? 0;
 }

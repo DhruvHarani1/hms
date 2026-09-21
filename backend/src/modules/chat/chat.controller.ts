@@ -67,6 +67,16 @@ export class ChatController {
     return this.chat.sendMessage(id, req.user.userId, dto);
   }
 
+  /** Delete a message (sender, or warden/staff moderation). */
+  @Delete('conversations/:id/messages/:messageId')
+  deleteMessage(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chat.deleteMessage(id, messageId, req.user.userId, req.user.hostelId, req.user.role);
+  }
+
   /** Mark conversation as read. */
   @Patch('conversations/:id/read')
   markRead(@Req() req: any, @Param('id') id: string) {

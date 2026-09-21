@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post, HttpCode, Req } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -22,6 +23,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('register')
   @HttpCode(201)
   register(@Body() dto: RegisterDto) {
@@ -29,6 +31,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 8 } })
   @Post('verify-otp')
   @HttpCode(200)
   verifyOtp(@Body() dto: VerifyOtpDto) {
@@ -36,6 +39,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @Post('resend-otp')
   @HttpCode(200)
   resendOtp(@Body() dto: ResendOtpDto) {
@@ -43,6 +47,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 8 } })
   @Post('login')
   @HttpCode(200)
   login(@Body() dto: LoginDto, @Req() req: Request) {
@@ -64,6 +69,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 3 } })
   @Post('forgot-password')
   @HttpCode(200)
   forgotPassword(@Body() dto: ForgotPasswordDto) {
@@ -71,6 +77,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('reset-password')
   @HttpCode(200)
   resetPassword(@Body() dto: ResetPasswordDto) {

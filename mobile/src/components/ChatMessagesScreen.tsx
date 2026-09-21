@@ -30,7 +30,7 @@ const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 export default function ChatMessagesScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { messages, loading, sendMessage } = useChatMessages(id);
+  const { messages, loading, sendMessage, deleteMessage } = useChatMessages(id);
   const user = useAuth((s) => s.user);
   const flatListRef = useRef<FlatList>(null);
   const [convName, setConvName] = useState('Chat');
@@ -64,6 +64,26 @@ export default function ChatMessagesScreen() {
   const handleImagePress = useCallback((url: string) => {
     setViewerImage(url);
   }, []);
+
+  const handleLongPress = useCallback(
+    (messageId: string, isMe: boolean) => {
+      const canModerate = isMe || user?.role === 'warden' || user?.role === 'staff';
+      if (!canModerate) return;
+      Alert.alert('Delete message?', 'This cannot be undone.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteMessage(messageId).catch((e: any) =>
+              Alert.alert('Failed', e?.response?.data?.message ?? 'Try again.'),
+            );
+          },
+        },
+      ]);
+    },
+    [deleteMessage, user?.role],
+  );
 
   const handleDownload = useCallback(async () => {
     if (!viewerImage || saving) return;
@@ -139,6 +159,7 @@ export default function ChatMessagesScreen() {
         isMe={isMe}
         showSender={showSender}
         onImagePress={handleImagePress}
+        onLongPress={() => handleLongPress(item.id, isMe)}
       />
     );
   };

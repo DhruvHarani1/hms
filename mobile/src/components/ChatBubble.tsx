@@ -12,11 +12,13 @@ export function ChatBubble({
   isMe,
   showSender,
   onImagePress,
+  onLongPress,
 }: {
   message: CachedMessage;
   isMe: boolean;
   showSender: boolean;
   onImagePress?: (url: string) => void;
+  onLongPress?: () => void;
 }) {
   return (
     <View
@@ -40,6 +42,7 @@ export function ChatBubble({
           {message.senderName}
         </Text>
       )}
+      <Pressable onLongPress={onLongPress} delayLongPress={350}>
       <View
         style={{
           backgroundColor: isMe ? colors.primary : colors.card,
@@ -92,6 +95,7 @@ export function ChatBubble({
           {formatTime(message.createdAt)}
         </Text>
       </View>
+      </Pressable>
     </View>
   );
 }

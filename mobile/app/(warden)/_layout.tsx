@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Platform, Text, View, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { colors } from '@/src/lib/theme';
 import { BellButton } from '@/src/components/primitives';
@@ -7,7 +7,10 @@ import { HeaderLogo } from '@/src/components/HeaderLogo';
 import { useUnread } from '@/src/hooks/useUnread';
 import { useChatUnread } from '@/src/hooks/useChat';
 import { ChatButton } from '@/src/components/ChatButton';
+import { WardenSidebar } from '@/src/components/WardenSidebar';
 import { api } from '@/src/lib/api';
+
+const DESKTOP_BREAKPOINT = 900;
 
 function icon(emoji: string) {
   return ({ color }: { color: string }) => (
@@ -29,7 +32,7 @@ export default function WardenLayout() {
   const { data: requests } = useQuery({
     queryKey: ['join-requests-count'],
     queryFn: async () => (await api.get('/students/requests')).data,
-    refetchInterval: 20000,
+    refetchInterval: 60000,
   });
   const pendingCount = (requests ?? []).length;
 
@@ -37,16 +40,21 @@ export default function WardenLayout() {
   const { data: editCount } = useQuery({
     queryKey: ['edit-requests-count'],
     queryFn: async () => (await api.get('/edit-requests/count')).data,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
   });
   const editPendingCount = editCount?.count ?? 0;
-  return (
+
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === 'web' && width >= DESKTOP_BREAKPOINT;
+
+  const tabs = (
     <Tabs
       backBehavior="history"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         headerStyle: { backgroundColor: colors.card },
         headerTitleStyle: { fontWeight: '800' },
+        ...(isDesktopWeb && { tabBarStyle: { display: 'none' } }),
       }}
     >
       <Tabs.Screen
@@ -101,5 +109,16 @@ export default function WardenLayout() {
       <Tabs.Screen name="chat/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     </Tabs>
   );
+
+  if (isDesktopWeb) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <WardenSidebar />
+        <View style={{ flex: 1 }}>{tabs}</View>
+      </View>
+    );
+  }
+
+  return tabs;
 }
 

@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, Text, Linking } from 'react-native';
@@ -11,7 +14,21 @@ import { useUsageTracker } from '@/src/hooks/useUsageTracker';
 import { Button, Card, Muted } from '@/src/components/ui';
 import { colors } from '@/src/lib/theme';
 
-const queryClient = new QueryClient();
+// Default: data is fresh for 2 min (no refetch-on-remount thrash), kept in
+// memory/disk for 24h so cold starts render instantly from cache.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,
+      gcTime: 24 * 60 * 60 * 1000,
+    },
+  },
+});
+
+const persister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+  key: 'hms-query-cache',
+});
 
 function homeFor(role: string) {
   if (role === 'student') return '/(student)';
@@ -152,11 +169,14 @@ function AuthGate() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: 24 * 60 * 60 * 1000 }}
+    >
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <AuthGate />
       </SafeAreaProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }
