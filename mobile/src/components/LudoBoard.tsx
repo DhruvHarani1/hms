@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Image, Pressable, Text, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, Text, View } from 'react-native';
 
 const CELL = 22;
 const GRID = 15;
@@ -99,16 +99,41 @@ function AnimatedToken({
   isFinished: boolean;
   onPress: () => void;
 }) {
-  const pos = useRef(new Animated.ValueXY({ x: left, y: top })).current;
+  const x = useRef(new Animated.Value(left)).current;
+  const y = useRef(new Animated.Value(top)).current;
+  const lift = useRef(new Animated.Value(0)).current; // arc "hop" height while moving
+  const squashY = useRef(new Animated.Value(1)).current;
+  const squashX = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(1)).current;
+  const mounted = useRef(false);
 
   useEffect(() => {
-    Animated.spring(pos, {
-      toValue: { x: left, y: top },
-      useNativeDriver: false,
-      friction: 7,
-      tension: 60,
-    }).start();
+    if (!mounted.current) {
+      mounted.current = true;
+      x.setValue(left);
+      y.setValue(top);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(x, { toValue: left, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      Animated.timing(y, { toValue: top, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
+      Animated.sequence([
+        Animated.timing(lift, { toValue: -14, duration: 190, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+        Animated.timing(lift, { toValue: 0, duration: 190, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+      ]),
+    ]).start(() => {
+      // Squash-and-stretch landing bounce.
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(squashY, { toValue: 0.6, duration: 70, useNativeDriver: false }),
+          Animated.timing(squashX, { toValue: 1.3, duration: 70, useNativeDriver: false }),
+        ]),
+        Animated.parallel([
+          Animated.spring(squashY, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
+          Animated.spring(squashX, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
+        ]),
+      ]).start();
+    });
   }, [left, top]);
 
   useEffect(() => {
@@ -126,36 +151,71 @@ function AnimatedToken({
     return () => loop.stop();
   }, [canMove]);
 
+  const shadowScale = lift.interpolate({ inputRange: [-14, 0], outputRange: [0.6, 1] });
+  const shadowOpacity = lift.interpolate({ inputRange: [-14, 0], outputRange: [0.15, 0.35] });
+
   return (
-    <Animated.View
-      style={{
-        position: 'absolute',
-        left: pos.x,
-        top: pos.y,
-        width: TOKEN_SIZE,
-        height: TOKEN_SIZE,
-        transform: [{ scale: pulse }],
-        zIndex: canMove ? 10 : 1,
-      }}
-    >
-      <Pressable
-        disabled={!canMove}
-        onPress={onPress}
+    <>
+      {/* Ground contact shadow — follows the cell-to-cell move but not the hop lift */}
+      <Animated.View
+        pointerEvents="none"
         style={{
-          width: '100%',
-          height: '100%',
-          shadowColor: canMove ? '#ffd700' : '#000',
-          shadowOpacity: canMove ? 0.9 : 0.3,
-          shadowRadius: canMove ? 5 : 2,
-          shadowOffset: { width: 0, height: 1 },
+          position: 'absolute',
+          left: Animated.add(x, TOKEN_SIZE * 0.15),
+          top: Animated.add(y, TOKEN_SIZE * 0.72),
+          width: TOKEN_SIZE * 0.7,
+          height: TOKEN_SIZE * 0.28,
+          borderRadius: 999,
+          backgroundColor: '#000',
+          opacity: shadowOpacity,
+          transform: [{ scale: shadowScale }],
+        }}
+      />
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: x,
+          top: Animated.add(y, lift),
+          width: TOKEN_SIZE,
+          height: TOKEN_SIZE,
+          transform: [{ scale: pulse }, { scaleX: squashX }, { scaleY: squashY }],
+          zIndex: canMove ? 10 : 1,
         }}
       >
-        <Image source={TOKEN_IMAGES[color]} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
-        {isFinished && (
-          <Text style={{ position: 'absolute', top: -14, left: 2, fontSize: 10 }}>⭐</Text>
-        )}
-      </Pressable>
-    </Animated.View>
+        <Pressable
+          disabled={!canMove}
+          onPress={onPress}
+          style={{
+            width: '100%',
+            height: '100%',
+            shadowColor: canMove ? '#ffd700' : '#000',
+            shadowOpacity: canMove ? 0.95 : 0.4,
+            shadowRadius: canMove ? 6 : 2,
+            shadowOffset: { width: 0, height: 1 },
+          }}
+        >
+          <Image source={TOKEN_IMAGES[color]} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          {/* Glossy highlight for a rounder, more 3D-looking piece */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: '10%',
+              left: '18%',
+              width: '38%',
+              height: '26%',
+              borderRadius: 999,
+              backgroundColor: '#ffffff',
+              opacity: 0.55,
+              transform: [{ rotate: '-20deg' }],
+            }}
+          />
+          {isFinished && (
+            <Text style={{ position: 'absolute', top: -14, left: 2, fontSize: 10 }}>⭐</Text>
+          )}
+        </Pressable>
+      </Animated.View>
+    </>
   );
 }
 
@@ -185,12 +245,44 @@ export function LudoBoard({
   }
 
   return (
-    <View style={{ width: BOARD, height: BOARD, backgroundColor: '#fdf6e3', borderRadius: 10, borderWidth: 3, borderColor: '#5b4636' }}>
+    <View
+      style={{
+        width: BOARD,
+        height: BOARD,
+        backgroundColor: '#e8c99b',
+        borderRadius: 12,
+        borderWidth: 4,
+        borderColor: '#7a4f2b',
+        shadowColor: '#000',
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 5 },
+        elevation: 8,
+      }}
+    >
+      {/* Subtle wood-tone shading (layered gradients-by-hand, no image asset) */}
+      <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 8, overflow: 'hidden' }}>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', backgroundColor: '#fff', opacity: 0.08 }} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '35%', backgroundColor: '#000', opacity: 0.06 }} />
+      </View>
+
       {/* Yard quadrants */}
       {COLOR_ORDER.map((color) => {
         const [r, c] = YARD_BLOCK[color];
         return (
-          <View key={color} style={style(r, c, { width: CELL * 6, height: CELL * 6, backgroundColor: COLOR_HEX[color], borderRadius: 6 })}>
+          <View
+            key={color}
+            style={style(r, c, {
+              width: CELL * 6,
+              height: CELL * 6,
+              backgroundColor: COLOR_HEX[color],
+              borderRadius: 6,
+              shadowColor: '#000',
+              shadowOpacity: 0.2,
+              shadowRadius: 3,
+              shadowOffset: { width: 0, height: 2 },
+            })}
+          >
             <View style={{ position: 'absolute', left: CELL * 0.6, top: CELL * 0.6, width: CELL * 4.8, height: CELL * 4.8, backgroundColor: '#fff', borderRadius: 10 }} />
           </View>
         );
@@ -198,7 +290,7 @@ export function LudoBoard({
 
       {/* Shared path cells */}
       {ABS_PATH.map(([r, c], i) => (
-        <View key={`p${i}`} style={style(r, c, { backgroundColor: '#fff', borderWidth: 0.5, borderColor: '#e5dcc3' })} />
+        <View key={`p${i}`} style={style(r, c, { backgroundColor: '#fffaf0', borderWidth: 0.5, borderColor: '#d9bd8f' })} />
       ))}
 
       {/* Color each color's entry cell + home stretch */}

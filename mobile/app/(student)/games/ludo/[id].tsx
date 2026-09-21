@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGameRoom } from '@/src/hooks/useGameRoom';
@@ -53,7 +53,10 @@ export default function LudoGame() {
   // ── Dice roll animation state (must be unconditional — before any early return) ──
   const [isRolling, setIsRolling] = useState(false);
   const [displayFace, setDisplayFace] = useState(1);
-  const spin = useRef(new Animated.Value(0)).current;
+  const rotX = useRef(new Animated.Value(0)).current;
+  const rotY = useRef(new Animated.Value(0)).current;
+  const rotZ = useRef(new Animated.Value(0)).current;
+  const toss = useRef(new Animated.Value(0)).current;
   const prevLogRef = useRef<string | undefined>(undefined);
   const prevStatusRef = useRef<string | undefined>(undefined);
 
@@ -85,15 +88,28 @@ export default function LudoGame() {
   async function handleRoll() {
     setIsRolling(true);
     playSound('diceRoll');
-    Animated.loop(Animated.timing(spin, { toValue: 1, duration: 250, useNativeDriver: true })).start();
+
+    const spinLoops = [
+      Animated.loop(Animated.timing(rotX, { toValue: 1, duration: 260, easing: Easing.linear, useNativeDriver: true })),
+      Animated.loop(Animated.timing(rotY, { toValue: 1, duration: 340, easing: Easing.linear, useNativeDriver: true })),
+      Animated.loop(Animated.timing(rotZ, { toValue: 1, duration: 190, easing: Easing.linear, useNativeDriver: true })),
+    ];
+    spinLoops.forEach((l) => l.start());
+    Animated.sequence([
+      Animated.timing(toss, { toValue: -26, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.spring(toss, { toValue: 0, friction: 4, tension: 120, useNativeDriver: true }),
+    ]).start();
+
     const rollInterval = setInterval(() => setDisplayFace(1 + Math.floor(Math.random() * 6)), 90);
     try {
       await Promise.all([makeMove('roll'), new Promise((res) => setTimeout(res, 550))]);
     } catch {
     } finally {
       clearInterval(rollInterval);
-      spin.stopAnimation();
-      spin.setValue(0);
+      spinLoops.forEach((l) => l.stop());
+      rotX.setValue(0);
+      rotY.setValue(0);
+      rotZ.setValue(0);
       setIsRolling(false);
     }
   }
@@ -187,7 +203,9 @@ export default function LudoGame() {
   const me = state.players.find((p: any) => p.userId === user?.id);
   const currentPlayer = state.players[state.currentPlayerIndex];
   const shownFace = isRolling ? displayFace : state.diceValue;
-  const spinDeg = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const rotXDeg = rotX.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const rotYDeg = rotY.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const rotZDeg = rotZ.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -254,12 +272,25 @@ export default function LudoGame() {
                 borderColor: COLOR_HEX[me?.color ?? 'red'],
                 alignItems: 'center',
                 justifyContent: 'center',
-                transform: [{ rotate: spinDeg }],
+                shadowColor: '#000',
+                shadowOpacity: 0.25,
+                shadowRadius: 5,
+                shadowOffset: { width: 0, height: 3 },
+                transform: [{ translateY: toss }],
               }}
             >
-              <Image
+              <Animated.Image
                 source={DICE_IMAGES[shownFace ?? 1]}
-                style={{ width: 48, height: 48 }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  transform: [
+                    { perspective: 400 },
+                    { rotateX: rotXDeg },
+                    { rotateY: rotYDeg },
+                    { rotateZ: rotZDeg },
+                  ],
+                }}
                 resizeMode="contain"
               />
             </Animated.View>
