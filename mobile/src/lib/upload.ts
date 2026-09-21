@@ -2,7 +2,7 @@ import { Platform, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from './api';
 
-export type DocKind = 'aadhaar' | 'course_proof' | 'photo' | 'complaint';
+export type DocKind = 'aadhaar' | 'course_proof' | 'photo' | 'complaint' | 'notice';
 
 /** Helper to upload asset to Cloudinary. */
 async function uploadAsset(asset: ImagePicker.ImagePickerAsset, kind: DocKind): Promise<string> {

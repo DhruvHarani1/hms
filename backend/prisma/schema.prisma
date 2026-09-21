@@ -567,6 +567,7 @@ model Notice {
   body        String
   category    NoticeCategory @default(announcement)
   pinned      Boolean        @default(false)
+  imageKey    String?        @map("image_key")
   publishedAt DateTime?      @map("published_at")
   expiresAt   DateTime?      @map("expires_at")
   createdBy   String?        @map("created_by")
