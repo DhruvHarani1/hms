@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, Text, View } from 'react-native';
 
 const CELL = 22;
@@ -71,7 +71,6 @@ const YARD_SLOTS: Record<string, RC[]> = (() => {
 const YARD_BLOCK: Record<string, RC> = { red: [0, 0], green: [0, 9], yellow: [9, 9], blue: [9, 0] };
 
 function cellRC(color: string, relative: number): RC {
-  if (relative === -1) return YARD_SLOTS[color][0]; // caller picks exact slot separately
   if (relative >= 51) {
     const idx = Math.min(relative - 51, 5);
     return HOME_STRETCH[color][idx];
@@ -80,61 +79,180 @@ function cellRC(color: string, relative: number): RC {
   return ABS_PATH[(startOffset + relative) % 52];
 }
 
+/** Pixel top-left for a token at a given relative position (-1 = its own yard slot). */
+function pixelFor(color: string, relative: number, tokenIndex: number, nudge: number) {
+  const rc: RC = relative === -1 ? YARD_SLOTS[color][tokenIndex] : cellRC(color, relative);
+  return {
+    left: rc[1] * CELL + CELL / 2 - TOKEN_SIZE / 2 + nudge,
+    top: rc[0] * CELL + CELL / 2 - TOKEN_SIZE / 2,
+  };
+}
+
 function style(r: number, c: number, extra?: object) {
   return { position: 'absolute' as const, left: c * CELL, top: r * CELL, width: CELL, height: CELL, ...extra };
 }
 
+/** One-shot little sparkle burst — used when a token reaches home. */
+function Sparkle({ left, top }: { left: number; top: number }) {
+  const particles = useRef(
+    Array.from({ length: 8 }, (_, i) => ({ angle: (i / 8) * Math.PI * 2, v: new Animated.Value(0) })),
+  ).current;
+
+  useEffect(() => {
+    Animated.stagger(
+      12,
+      particles.map((p) => Animated.timing(p.v, { toValue: 1, duration: 480, easing: Easing.out(Easing.quad), useNativeDriver: false })),
+    ).start();
+  }, []);
+
+  return (
+    <>
+      {particles.map((p, i) => {
+        const dist = 20;
+        const tx = p.v.interpolate({ inputRange: [0, 1], outputRange: [0, Math.cos(p.angle) * dist] });
+        const ty = p.v.interpolate({ inputRange: [0, 1], outputRange: [0, Math.sin(p.angle) * dist] });
+        const opacity = p.v.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] });
+        return (
+          <Animated.View
+            key={i}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: left + TOKEN_SIZE / 2 - 3,
+              top: top + TOKEN_SIZE / 2 - 3,
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: '#ffd700',
+              opacity,
+              transform: [{ translateX: tx }, { translateY: ty }],
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function AnimatedToken({
   color,
-  left,
-  top,
+  tokenIndex,
+  relativePos,
+  nudge,
   canMove,
-  isFinished,
   onPress,
 }: {
   color: string;
-  left: number;
-  top: number;
+  tokenIndex: number;
+  relativePos: number;
+  nudge: number;
   canMove: boolean;
-  isFinished: boolean;
   onPress: () => void;
 }) {
-  const x = useRef(new Animated.Value(left)).current;
-  const y = useRef(new Animated.Value(top)).current;
-  const lift = useRef(new Animated.Value(0)).current; // arc "hop" height while moving
+  const initial = pixelFor(color, relativePos, tokenIndex, nudge);
+  const x = useRef(new Animated.Value(initial.left)).current;
+  const y = useRef(new Animated.Value(initial.top)).current;
+  const lift = useRef(new Animated.Value(0)).current;
   const squashY = useRef(new Animated.Value(1)).current;
   const squashX = useRef(new Animated.Value(1)).current;
   const pulse = useRef(new Animated.Value(1)).current;
-  const mounted = useRef(false);
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressScale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
+  const prevPosRef = useRef(relativePos);
+  const mountedRef = useRef(false);
+  const [sparkleAt, setSparkleAt] = useState<{ left: number; top: number } | null>(null);
+
+  function bounceLanding() {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(squashY, { toValue: 0.6, duration: 70, useNativeDriver: false }),
+        Animated.timing(squashX, { toValue: 1.3, duration: 70, useNativeDriver: false }),
+      ]),
+      Animated.parallel([
+        Animated.spring(squashY, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
+        Animated.spring(squashX, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
+      ]),
+    ]).start();
+  }
+
+  function hop(toLeft: number, toTop: number, duration: number) {
+    return Animated.parallel([
+      Animated.timing(x, { toValue: toLeft, duration, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.timing(y, { toValue: toTop, duration, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+      Animated.sequence([
+        Animated.timing(lift, { toValue: -10, duration: duration / 2, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+        Animated.timing(lift, { toValue: 0, duration: duration / 2, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+      ]),
+    ]);
+  }
 
   useEffect(() => {
-    if (!mounted.current) {
-      mounted.current = true;
-      x.setValue(left);
-      y.setValue(top);
+    const prev = prevPosRef.current;
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevPosRef.current = relativePos;
       return;
     }
+    if (prev === relativePos) return;
+    prevPosRef.current = relativePos;
+
+    // Captured — knocked back to the yard: shrink/fade out, reposition, pop back in.
+    if (relativePos === -1 && prev !== -1) {
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 0, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: false }),
+        Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: false }),
+      ]).start(() => {
+        const dest = pixelFor(color, relativePos, tokenIndex, nudge);
+        x.setValue(dest.left);
+        y.setValue(dest.top);
+        Animated.parallel([
+          Animated.spring(scale, { toValue: 1, friction: 4, tension: 160, useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: false }),
+        ]).start();
+      });
+      return;
+    }
+
+    // Leaving the yard — a single "pop" rather than a hop chain.
+    if (prev === -1 && relativePos >= 0) {
+      const dest = pixelFor(color, relativePos, tokenIndex, nudge);
+      scale.setValue(0.3);
+      Animated.parallel([
+        Animated.timing(x, { toValue: dest.left, duration: 220, useNativeDriver: false }),
+        Animated.timing(y, { toValue: dest.top, duration: 220, useNativeDriver: false }),
+        Animated.spring(scale, { toValue: 1, friction: 3.5, tension: 160, useNativeDriver: false }),
+      ]).start(bounceLanding);
+      return;
+    }
+
+    // Normal forward move — hop cell-by-cell along the actual path.
+    if (relativePos > prev) {
+      const steps: number[] = [];
+      for (let s = prev + 1; s <= relativePos; s++) steps.push(s);
+      const hopDuration = steps.length >= 5 ? 95 : 130;
+      const anims = steps.map((s) => {
+        const p = pixelFor(color, s, tokenIndex, nudge);
+        return hop(p.left, p.top, hopDuration);
+      });
+      Animated.sequence(anims).start(() => {
+        bounceLanding();
+        if (relativePos === 57) {
+          const p = pixelFor(color, relativePos, tokenIndex, nudge);
+          setSparkleAt(p);
+          setTimeout(() => setSparkleAt(null), 700);
+        }
+      });
+      return;
+    }
+
+    // Fallback — snap directly (shouldn't normally happen).
+    const dest = pixelFor(color, relativePos, tokenIndex, nudge);
     Animated.parallel([
-      Animated.timing(x, { toValue: left, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-      Animated.timing(y, { toValue: top, duration: 380, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
-      Animated.sequence([
-        Animated.timing(lift, { toValue: -14, duration: 190, easing: Easing.out(Easing.quad), useNativeDriver: false }),
-        Animated.timing(lift, { toValue: 0, duration: 190, easing: Easing.in(Easing.quad), useNativeDriver: false }),
-      ]),
-    ]).start(() => {
-      // Squash-and-stretch landing bounce.
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(squashY, { toValue: 0.6, duration: 70, useNativeDriver: false }),
-          Animated.timing(squashX, { toValue: 1.3, duration: 70, useNativeDriver: false }),
-        ]),
-        Animated.parallel([
-          Animated.spring(squashY, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
-          Animated.spring(squashX, { toValue: 1, friction: 3.5, tension: 200, useNativeDriver: false }),
-        ]),
-      ]).start();
-    });
-  }, [left, top]);
+      Animated.timing(x, { toValue: dest.left, duration: 300, useNativeDriver: false }),
+      Animated.timing(y, { toValue: dest.top, duration: 300, useNativeDriver: false }),
+    ]).start();
+  }, [relativePos]);
 
   useEffect(() => {
     if (!canMove) {
@@ -153,6 +271,7 @@ function AnimatedToken({
 
   const shadowScale = lift.interpolate({ inputRange: [-14, 0], outputRange: [0.6, 1] });
   const shadowOpacity = lift.interpolate({ inputRange: [-14, 0], outputRange: [0.15, 0.35] });
+  const combinedScale = Animated.multiply(pulse, Animated.multiply(scale, pressScale));
 
   return (
     <>
@@ -178,13 +297,16 @@ function AnimatedToken({
           top: Animated.add(y, lift),
           width: TOKEN_SIZE,
           height: TOKEN_SIZE,
-          transform: [{ scale: pulse }, { scaleX: squashX }, { scaleY: squashY }],
+          opacity,
+          transform: [{ scale: combinedScale }, { scaleX: squashX }, { scaleY: squashY }],
           zIndex: canMove ? 10 : 1,
         }}
       >
         <Pressable
           disabled={!canMove}
           onPress={onPress}
+          onPressIn={() => canMove && Animated.spring(pressScale, { toValue: 0.82, friction: 5, useNativeDriver: false }).start()}
+          onPressOut={() => Animated.spring(pressScale, { toValue: 1, friction: 5, useNativeDriver: false }).start()}
           style={{
             width: '100%',
             height: '100%',
@@ -210,12 +332,32 @@ function AnimatedToken({
               transform: [{ rotate: '-20deg' }],
             }}
           />
-          {isFinished && (
+          {relativePos === 57 && (
             <Text style={{ position: 'absolute', top: -14, left: 2, fontSize: 10 }}>⭐</Text>
           )}
         </Pressable>
       </Animated.View>
+      {sparkleAt && <Sparkle left={sparkleAt.left} top={sparkleAt.top} />}
     </>
+  );
+}
+
+function StarCell({ r, c }: { r: number; c: number }) {
+  const twinkle = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(twinkle, { toValue: 1, duration: 900, useNativeDriver: false }),
+        Animated.timing(twinkle, { toValue: 0.4, duration: 900, useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  return (
+    <View style={style(r, c, { alignItems: 'center', justifyContent: 'center' })}>
+      <Animated.Text style={{ fontSize: 11, color: '#c9a227', opacity: twinkle }}>★</Animated.Text>
+    </View>
   );
 }
 
@@ -234,12 +376,7 @@ export function LudoBoard({
   const tokenCells: { color: string; tokenIndex: number; isMine: boolean; r: number; c: number; pos: number }[] = [];
   for (const p of players) {
     p.tokens.forEach((pos, i) => {
-      let rc: RC;
-      if (pos === -1) {
-        rc = YARD_SLOTS[p.color][i];
-      } else {
-        rc = cellRC(p.color, pos);
-      }
+      const rc: RC = pos === -1 ? YARD_SLOTS[p.color][i] : cellRC(p.color, pos);
       tokenCells.push({ color: p.color, tokenIndex: i, isMine: p.color === currentPlayerColor, r: rc[0], c: rc[1], pos });
     });
   }
@@ -306,11 +443,7 @@ export function LudoBoard({
       {COLOR_ORDER.map((color) => {
         const starIdx = COLOR_ORDER.indexOf(color) * 13 + 8;
         const [sr, sc] = ABS_PATH[starIdx];
-        return (
-          <View key={`star-${color}`} style={style(sr, sc, { alignItems: 'center', justifyContent: 'center' })}>
-            <Text style={{ fontSize: 11, color: '#c9a227' }}>★</Text>
-          </View>
-        );
+        return <StarCell key={`star-${color}`} r={sr} c={sc} />;
       })}
       {COLOR_ORDER.map((color) =>
         HOME_STRETCH[color].map(([r, c], i) => (
@@ -333,10 +466,10 @@ export function LudoBoard({
           <AnimatedToken
             key={`${t.color}-${t.tokenIndex}`}
             color={t.color}
-            left={t.c * CELL + CELL / 2 - TOKEN_SIZE / 2 + nudge}
-            top={t.r * CELL + CELL / 2 - TOKEN_SIZE / 2}
+            tokenIndex={t.tokenIndex}
+            relativePos={t.pos}
+            nudge={nudge}
             canMove={canMove}
-            isFinished={t.pos === 57}
             onPress={() => onTokenPress(t.tokenIndex)}
           />
         );

@@ -20,6 +20,44 @@ const COLOR_HEX: Record<string, string> = {
   blue: '#1b6ec2',
 };
 
+function PlayerChip({ player, active, colorHex }: { player: any; active: boolean; colorHex: string }) {
+  const glow = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!active) {
+      glow.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1.08, duration: 550, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 1, duration: 550, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [active]);
+
+  return (
+    <Animated.View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: active ? colorHex + '33' : colors.card,
+        borderWidth: active ? 2 : 1,
+        borderColor: active ? colorHex : colors.border,
+        transform: [{ scale: glow }],
+      }}
+    >
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colorHex }} />
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>{player.name}</Text>
+    </Animated.View>
+  );
+}
+
 const DICE_IMAGES: Record<number, any> = {
   1: require('../../../../assets/games/dice/dice-1.png'),
   2: require('../../../../assets/games/dice/dice-2.png'),
@@ -57,20 +95,45 @@ export default function LudoGame() {
   const rotY = useRef(new Animated.Value(0)).current;
   const rotZ = useRef(new Animated.Value(0)).current;
   const toss = useRef(new Animated.Value(0)).current;
+  const dicePressScale = useRef(new Animated.Value(1)).current;
+  const captureFlash = useRef(new Animated.Value(0)).current;
+  const turnBanner = useRef(new Animated.Value(0)).current;
   const prevLogRef = useRef<string | undefined>(undefined);
   const prevStatusRef = useRef<string | undefined>(undefined);
+  const prevTurnRef = useRef<string | undefined>(undefined);
 
   // Reactively play move/capture/win sounds whenever the shared game log advances.
   useEffect(() => {
     const latest = state?.log?.[0];
     if (latest && latest !== prevLogRef.current) {
       if (prevLogRef.current !== undefined) {
-        if (latest.includes('Captured')) playSound('capture');
-        else if (latest.includes('moved a token')) playSound('tokenMove');
+        if (latest.includes('Captured')) {
+          playSound('capture');
+          Animated.sequence([
+            Animated.timing(captureFlash, { toValue: 1, duration: 80, useNativeDriver: true }),
+            Animated.timing(captureFlash, { toValue: 0, duration: 260, useNativeDriver: true }),
+          ]).start();
+        } else if (latest.includes('moved a token')) {
+          playSound('tokenMove');
+        }
       }
       prevLogRef.current = latest;
     }
   }, [state?.log?.[0]]);
+
+  // Slide in a "your turn" banner whenever the active player changes.
+  useEffect(() => {
+    const current = room?.currentTurnUserId ?? undefined;
+    if (current !== prevTurnRef.current) {
+      prevTurnRef.current = current;
+      turnBanner.setValue(0);
+      Animated.sequence([
+        Animated.timing(turnBanner, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.delay(900),
+        Animated.timing(turnBanner, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [room?.currentTurnUserId]);
 
   useEffect(() => {
     if (room?.status === 'finished' && prevStatusRef.current !== 'finished') {
@@ -220,25 +283,50 @@ export default function LudoGame() {
         }}
       />
 
+      {/* Capture impact flash */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: '#ff3b30',
+          opacity: captureFlash,
+          zIndex: 50,
+        }}
+      />
+
+      {/* Turn-change banner */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 8,
+          alignSelf: 'center',
+          zIndex: 40,
+          opacity: turnBanner,
+          transform: [{ translateY: turnBanner.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }],
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: myTurn ? colors.primary : '#333',
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderRadius: 999,
+          }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>
+            {myTurn ? '🎯 Your turn!' : `${currentPlayer.name}'s turn`}
+          </Text>
+        </View>
+      </Animated.View>
+
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, padding: 12 }}>
         {state.players.map((p: any) => (
-          <View
-            key={p.userId}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              backgroundColor: currentPlayer.userId === p.userId ? COLOR_HEX[p.color] + '33' : colors.card,
-              borderWidth: currentPlayer.userId === p.userId ? 2 : 1,
-              borderColor: currentPlayer.userId === p.userId ? COLOR_HEX[p.color] : colors.border,
-            }}
-          >
-            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: COLOR_HEX[p.color] }} />
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>{p.name}</Text>
-          </View>
+          <PlayerChip key={p.userId} player={p} active={currentPlayer.userId === p.userId} colorHex={COLOR_HEX[p.color]} />
         ))}
       </View>
 
@@ -261,7 +349,12 @@ export default function LudoGame() {
         </Text>
 
         {myTurn && state.turnPhase === 'roll' && (
-          <Pressable onPress={handleRoll} disabled={acting || isRolling}>
+          <Pressable
+            onPress={handleRoll}
+            disabled={acting || isRolling}
+            onPressIn={() => Animated.spring(dicePressScale, { toValue: 0.88, friction: 5, useNativeDriver: true }).start()}
+            onPressOut={() => Animated.spring(dicePressScale, { toValue: 1, friction: 5, useNativeDriver: true }).start()}
+          >
             <Animated.View
               style={{
                 width: 68,
@@ -276,7 +369,7 @@ export default function LudoGame() {
                 shadowOpacity: 0.25,
                 shadowRadius: 5,
                 shadowOffset: { width: 0, height: 3 },
-                transform: [{ translateY: toss }],
+                transform: [{ translateY: toss }, { scale: dicePressScale }],
               }}
             >
               <Animated.Image
