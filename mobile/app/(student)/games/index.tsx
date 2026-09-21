@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, Stack } from 'expo-router';
 import { api } from '@/src/lib/api';
@@ -25,7 +25,13 @@ export default function GamesLobby() {
   const [joinCode, setJoinCode] = useState('');
   const [creating, setCreating] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [botPicker, setBotPicker] = useState<'uno' | 'ludo' | null>(null);
   const nearbyGames = useLocalGameDiscovery(true);
+
+  function startBotGame(gameType: 'uno' | 'ludo', botCount: number) {
+    setBotPicker(null);
+    router.push(`/(student)/games/${gameType}/bot?bots=${botCount}` as any);
+  }
 
   const { data: rooms, isLoading, isError, refetch } = useQuery({
     queryKey: ['game-rooms'],
@@ -126,6 +132,17 @@ export default function GamesLobby() {
             </Card>
 
             <Card style={{ gap: 10 }}>
+              <Text style={{ fontWeight: '700', color: colors.text }}>🤖 Play vs Computer</Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                Solo play — no other players or network needed at all.
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button title="🃏 UNO" variant="outline" onPress={() => setBotPicker('uno')} />
+                <Button title="🎲 Ludo" variant="outline" onPress={() => setBotPicker('ludo')} />
+              </View>
+            </Card>
+
+            <Card style={{ gap: 10 }}>
               <Text style={{ fontWeight: '700', color: colors.text }}>📶 Local WiFi (no internet used)</Text>
               <Text style={{ color: colors.muted, fontSize: 12 }}>
                 Play with people on the same WiFi network — nothing goes through the server.
@@ -220,6 +237,37 @@ export default function GamesLobby() {
           );
         }}
       />
+
+      <Modal visible={!!botPicker} transparent animationType="fade" onRequestClose={() => setBotPicker(null)}>
+        <View style={{ flex: 1, backgroundColor: '#00000055', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: radius.lg, padding: 20, gap: 12 }}>
+            <Text style={{ fontWeight: '800', fontSize: 16, textAlign: 'center', color: colors.text }}>
+              How many bots?
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+              {[1, 2, 3].map((n) => (
+                <Pressable
+                  key={n}
+                  onPress={() => botPicker && startBotGame(botPicker, n)}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 12,
+                    backgroundColor: colors.primary + '18',
+                    borderWidth: 1,
+                    borderColor: colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontWeight: '800', fontSize: 18, color: colors.primary }}>{n}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <Button title="Cancel" variant="outline" onPress={() => setBotPicker(null)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

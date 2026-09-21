@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LocalGameHost } from '../lib/localGame/LocalGameHost';
 import { LocalGameClient } from '../lib/localGame/LocalGameClient';
+import { LocalBotGame } from '../lib/localGame/LocalBotGame';
 import { GameType } from '../lib/gameEngines/dispatch';
 import { useAuth } from '../stores/auth';
 
@@ -140,4 +141,45 @@ export function useLocalGameClient(enabled: boolean, conn: { ip: string; port: n
   }, []);
 
   return { room, loading, error, acting, startGame, makeMove, leaveRoom };
+}
+
+/** Single-player vs computer. Fully on-device — no networking, no backend calls. */
+export function useBotGameRoom(enabled: boolean, gameType: GameType | null, botCount: number) {
+  const user = useAuth((s) => s.user);
+  const [room, setRoom] = useState<any | null>(null);
+  const [acting, setActing] = useState(false);
+  const botRef = useRef<LocalBotGame | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !gameType || !user) return;
+    let cancelled = false;
+
+    const bot = new LocalBotGame(gameType, { userId: user.id, name: user.fullName }, botCount, (r) => {
+      if (!cancelled) setRoom(r);
+    });
+    botRef.current = bot;
+
+    return () => {
+      cancelled = true;
+      bot.leave();
+      botRef.current = null;
+    };
+  }, [enabled, gameType, botCount, user?.id]);
+
+  const startGame = useCallback(async () => {}, []); // bot games auto-start
+
+  const makeMove = useCallback(async (action: string, payload?: Record<string, any>) => {
+    setActing(true);
+    try {
+      botRef.current?.makeMove(action, payload);
+    } finally {
+      setActing(false);
+    }
+  }, []);
+
+  const leaveRoom = useCallback(async () => {
+    botRef.current?.leave();
+  }, []);
+
+  return { room, loading: !room, error: null, acting, startGame, makeMove, leaveRoom };
 }

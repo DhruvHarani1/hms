@@ -118,7 +118,7 @@ export function createInitialState(players: { userId: string; name: string }[]):
   };
 }
 
-function isPlayable(state: UnoState, cardId: string): boolean {
+export function isPlayable(state: UnoState, cardId: string): boolean {
   const top = parseCard(state.discard[state.discard.length - 1]);
   const card = parseCard(cardId);
   if (card.color === 'wild') return true;

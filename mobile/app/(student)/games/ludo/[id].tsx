@@ -2,7 +2,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGameRoom } from '@/src/hooks/useGameRoom';
-import { useLocalGameHost, useLocalGameClient } from '@/src/hooks/useLocalGameRoom';
+import { useLocalGameHost, useLocalGameClient, useBotGameRoom } from '@/src/hooks/useLocalGameRoom';
 import { useAuth } from '@/src/stores/auth';
 import { LudoBoard } from '@/src/components/LudoBoard';
 import { LocalHostQr } from '@/src/components/LocalHostQr';
@@ -20,20 +20,22 @@ const COLOR_HEX: Record<string, string> = {
 const DICE_FACES: Record<number, string> = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
 
 export default function LudoGame() {
-  const { id, role, ip, port } = useLocalSearchParams<{ id: string; role?: string; ip?: string; port?: string }>();
+  const { id, role, ip, port, bots } = useLocalSearchParams<{ id: string; role?: string; ip?: string; port?: string; bots?: string }>();
   const router = useRouter();
   const qc = useQueryClient();
   const { user } = useAuth();
 
   const isLocal = id === 'local';
+  const isBot = id === 'bot';
   const isLocalHost = isLocal && role === 'host';
   const isLocalClient = isLocal && role === 'client';
 
-  const online = useGameRoom(!isLocal ? id : undefined);
+  const online = useGameRoom(!isLocal && !isBot ? id : undefined);
   const localHost = useLocalGameHost(isLocalHost, 'ludo');
   const localClient = useLocalGameClient(isLocalClient, isLocalClient && ip && port ? { ip, port: Number(port) } : null);
+  const botGame = useBotGameRoom(isBot, 'ludo', bots ? Number(bots) : 1);
 
-  const active = isLocalHost ? localHost : isLocalClient ? localClient : online;
+  const active = isBot ? botGame : isLocalHost ? localHost : isLocalClient ? localClient : online;
   const { room, loading, error, acting, startGame, makeMove, leaveRoom } = active;
   const connInfo = isLocalHost ? localHost.connInfo : null;
 
