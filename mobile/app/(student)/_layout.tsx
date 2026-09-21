@@ -63,6 +63,11 @@ export default function StudentLayout() {
       />
       {/* Not in tab bar — reached via navigation */}
       <Tabs.Screen name="achievements" options={{ href: null, title: 'Achievements' }} />
+      <Tabs.Screen name="leaderboard" options={{ href: null, title: 'Leaderboard' }} />
+      <Tabs.Screen name="games/index" options={{ href: null, title: 'Games' }} />
+      <Tabs.Screen name="games/uno/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="games/ludo/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+      <Tabs.Screen name="games/scan" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="splits" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="expenditure" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="chat" options={{ href: null }} />

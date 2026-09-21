@@ -62,6 +62,12 @@
           "photosPermission": "Allow AIFDMS to save chat images to your gallery.",
           "savePhotosPermission": "Allow AIFDMS to save chat images to your gallery."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AIFDMS to use your camera to scan a local-game QR code."
+        }
       ]
     ],
     "extra": {

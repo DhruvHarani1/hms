@@ -109,6 +109,17 @@ enum MessageType {
   image
 }
 
+enum GameType {
+  uno
+  ludo
+}
+
+enum GameStatus {
+  waiting
+  playing
+  finished
+}
+
 // ─────────────────────────── Core / Auth ───────────────────────────
 
 model Hostel {
@@ -139,6 +150,7 @@ model Hostel {
   mealReviews          MealReview[]
   expenses             Expense[]
   editRequests         AttendanceEditRequest[]
+  gameRooms            GameRoom[]
 
   @@map("hostels")
 }
@@ -186,6 +198,7 @@ model User {
   studentBudget          StudentBudget?
   editRequests           AttendanceEditRequest[]  @relation("EditRequestStudent")
   reviewedEditRequests   AttendanceEditRequest[]  @relation("EditRequestReviewer")
+  gameRoomPlayers        GameRoomPlayer[]
 
   @@index([hostelId])
   @@map("users")
@@ -710,4 +723,44 @@ model StudentBudget {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("student_budgets")
+}
+
+// ─────────────────────────── Games (UNO / Ludo) ───────────────────────────
+// Polling-based multiplayer, same pattern as chat. `state` holds the full
+// game-engine state as JSON — engines are pure functions over that JSON.
+
+model GameRoom {
+  id                String     @id @default(uuid())
+  hostelId          String     @map("hostel_id")
+  gameType          GameType   @map("game_type")
+  status            GameStatus @default(waiting)
+  code              String     @unique
+  hostId            String     @map("host_id")
+  maxPlayers        Int        @map("max_players")
+  state             Json
+  currentTurnUserId String?    @map("current_turn_user_id")
+  winnerUserId      String?    @map("winner_user_id")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  hostel  Hostel           @relation(fields: [hostelId], references: [id])
+  players GameRoomPlayer[]
+
+  @@index([hostelId, status])
+  @@map("game_rooms")
+}
+
+model GameRoomPlayer {
+  id       String   @id @default(uuid())
+  roomId   String   @map("room_id")
+  userId   String   @map("user_id")
+  seat     Int
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  room GameRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@unique([roomId, seat])
+  @@map("game_room_players")
 }

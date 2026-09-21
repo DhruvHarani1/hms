@@ -100,6 +100,41 @@ export default function StudentHome() {
         </Pressable>
       )}
 
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Pressable
+          onPress={() => router.push('/(student)/leaderboard')}
+          style={{
+            flex: 1,
+            backgroundColor: colors.card,
+            borderRadius: 14,
+            padding: 14,
+            alignItems: 'center',
+            gap: 4,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>🏆</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>Leaderboard</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/(student)/games')}
+          style={{
+            flex: 1,
+            backgroundColor: colors.card,
+            borderRadius: 14,
+            padding: 14,
+            alignItems: 'center',
+            gap: 4,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Text style={{ fontSize: 22 }}>🎮</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>Games</Text>
+        </Pressable>
+      </View>
+
       <Card>
         <Muted>Room</Muted>
         <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>

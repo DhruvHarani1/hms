@@ -174,6 +174,11 @@ export class DashboardController {
     return { days, mealTrend, attendanceTrend, complaintsByCategory, complaintsByStatus };
   }
 
+  @Get('leaderboard')
+  async leaderboard(@CurrentUser() user: AuthUser) {
+    return this.gamification.getLeaderboard(user.hostelId);
+  }
+
   @Get('student')
   async student(@CurrentUser() user: AuthUser) {
     const hostelId = user.hostelId;

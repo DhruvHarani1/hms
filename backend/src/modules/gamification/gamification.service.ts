@@ -370,6 +370,41 @@ export class GamificationService {
     return { attendance: maxAttendance, meal: maxMeal, perfect: maxPerfect };
   }
 
+  // ─── Leaderboard (hostel-wide, ranked by weekly activity score) ───
+  async getLeaderboard(hostelId: string) {
+    const students = await this.prisma.user.findMany({
+      where: { hostelId, role: 'student', status: 'active', deletedAt: null },
+      select: { id: true, fullName: true, avatarUrl: true, studentProfile: { select: { roomNumber: true } } },
+    });
+
+    const rows = await Promise.all(
+      students.map(async (s) => {
+        const [weeklyScore, streaks, badges] = await Promise.all([
+          this.weeklyActivityScore(s.id),
+          this.computeStreaks(s.id),
+          this.computeBadges(s.id),
+        ]);
+        return {
+          studentId: s.id,
+          fullName: s.fullName,
+          avatarUrl: s.avatarUrl,
+          roomNumber: s.studentProfile?.roomNumber ?? null,
+          weeklyPercentage: weeklyScore.percentage,
+          perfectStreak: streaks.perfect.current,
+          badgeCount: badges.earnedCount,
+        };
+      }),
+    );
+
+    rows.sort((a, b) =>
+      b.weeklyPercentage - a.weeklyPercentage ||
+      b.perfectStreak - a.perfectStreak ||
+      b.badgeCount - a.badgeCount,
+    );
+
+    return rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  }
+
   // ─── Full payload ───
   async getStudentGamification(studentId: string) {
     const [streaks, weeklyScore, badges] = await Promise.all([

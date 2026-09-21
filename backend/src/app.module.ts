@@ -23,6 +23,7 @@ import { BirthdayModule } from './modules/birthday/birthday.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { EditRequestsModule } from './modules/edit-requests/edit-requests.module';
+import { GamesModule } from './modules/games/games.module';
 import { HealthController } from './health.controller';
 import { DownloadController } from './download.controller';
 
@@ -53,6 +54,7 @@ import { DownloadController } from './download.controller';
     ChatModule,
     ExpensesModule,
     EditRequestsModule,
+    GamesModule,
   ],
   controllers: [HealthController, DownloadController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -1,0 +1,219 @@
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { useGameRoom } from '@/src/hooks/useGameRoom';
+import { useLocalGameHost, useLocalGameClient } from '@/src/hooks/useLocalGameRoom';
+import { useAuth } from '@/src/stores/auth';
+import { LudoBoard } from '@/src/components/LudoBoard';
+import { LocalHostQr } from '@/src/components/LocalHostQr';
+import { Button } from '@/src/components/ui';
+import { ErrorState } from '@/src/components/primitives';
+import { colors, radius } from '@/src/lib/theme';
+
+const COLOR_HEX: Record<string, string> = {
+  red: '#e6392b',
+  green: '#2ea043',
+  yellow: '#f2c40f',
+  blue: '#1b6ec2',
+};
+
+const DICE_FACES: Record<number, string> = { 1: '⚀', 2: '⚁', 3: '⚂', 4: '⚃', 5: '⚄', 6: '⚅' };
+
+export default function LudoGame() {
+  const { id, role, ip, port } = useLocalSearchParams<{ id: string; role?: string; ip?: string; port?: string }>();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  const isLocal = id === 'local';
+  const isLocalHost = isLocal && role === 'host';
+  const isLocalClient = isLocal && role === 'client';
+
+  const online = useGameRoom(!isLocal ? id : undefined);
+  const localHost = useLocalGameHost(isLocalHost, 'ludo');
+  const localClient = useLocalGameClient(isLocalClient, isLocalClient && ip && port ? { ip, port: Number(port) } : null);
+
+  const active = isLocalHost ? localHost : isLocalClient ? localClient : online;
+  const { room, loading, error, acting, startGame, makeMove, leaveRoom } = active;
+  const connInfo = isLocalHost ? localHost.connInfo : null;
+
+  async function handleLeave() {
+    await leaveRoom();
+    qc.invalidateQueries({ queryKey: ['game-rooms'] });
+    router.replace('/(student)/games');
+  }
+
+  if (loading && !room) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+  if (error && !room) return <ErrorState onRetry={() => {}} />;
+  if (!room) return null;
+
+  const state = room.state;
+
+  // ── Waiting room ──
+  if (room.status === 'waiting') {
+    const isHost = room.hostId === user?.id;
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.bg, padding: 20, gap: 16 }}>
+        <Stack.Screen options={{ title: 'Ludo Lobby' }} />
+        <Text style={{ fontSize: 40, textAlign: 'center' }}>🎲</Text>
+        <Text style={{ textAlign: 'center', color: colors.muted }}>Room code</Text>
+        <Text style={{ textAlign: 'center', fontSize: 36, fontWeight: '900', letterSpacing: 6, color: colors.primary }}>
+          {room.code}
+        </Text>
+        {isLocalHost && connInfo && (
+          <LocalHostQr gameType="ludo" ip={connInfo.ip} port={connInfo.port} code={connInfo.code} />
+        )}
+        {isLocalClient && (
+          <Text style={{ textAlign: 'center', color: colors.muted, fontSize: 12 }}>
+            Connected over local WiFi — no internet used.
+          </Text>
+        )}
+        <View style={{ gap: 8 }}>
+          {room.players.map((p: any, i: number) => (
+            <View
+              key={p.id}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                backgroundColor: colors.card,
+                padding: 12,
+                borderRadius: radius.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: COLOR_HEX[['red', 'green', 'yellow', 'blue'][i]] }} />
+              <Text style={{ color: colors.text, fontWeight: '600' }}>{p.user.fullName}</Text>
+              {p.userId === room.hostId && <Text>👑</Text>}
+            </View>
+          ))}
+        </View>
+        <Text style={{ textAlign: 'center', color: colors.muted }}>
+          {room.players.length}/{room.maxPlayers} players · need 2+ to start
+        </Text>
+        {isHost ? (
+          <Button title="Start Game" onPress={startGame} loading={acting} disabled={room.players.length < 2} />
+        ) : (
+          <Text style={{ textAlign: 'center', color: colors.muted }}>Waiting for host to start…</Text>
+        )}
+        <Button title="Leave" variant="outline" onPress={handleLeave} />
+      </View>
+    );
+  }
+
+  // ── Finished ──
+  if (room.status === 'finished') {
+    const winner = state?.players?.find((p: any) => p.userId === state?.winnerUserId);
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 24, gap: 16 }}>
+        <Text style={{ fontSize: 60 }}>{winner?.userId === user?.id ? '🏆' : '🎲'}</Text>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center' }}>
+          {winner ? `${winner.name} (${winner.color}) wins!` : 'Game over'}
+        </Text>
+        <Button title="Back to Lobby" onPress={handleLeave} />
+      </View>
+    );
+  }
+
+  // ── Playing ──
+  const myTurn = room.currentTurnUserId === user?.id;
+  const me = state.players.find((p: any) => p.userId === user?.id);
+  const currentPlayer = state.players[state.currentPlayerIndex];
+
+  async function handleRoll() {
+    try {
+      await makeMove('roll');
+    } catch {}
+  }
+
+  async function handleTokenPress(tokenIndex: number) {
+    try {
+      await makeMove('move', { tokenIndex });
+    } catch {}
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <Stack.Screen
+        options={{
+          title: 'Ludo',
+          headerRight: () => (
+            <Pressable onPress={handleLeave} style={{ paddingHorizontal: 8 }}>
+              <Text style={{ color: colors.danger, fontWeight: '700' }}>Leave</Text>
+            </Pressable>
+          ),
+        }}
+      />
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, padding: 12 }}>
+        {state.players.map((p: any) => (
+          <View
+            key={p.userId}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              backgroundColor: currentPlayer.userId === p.userId ? COLOR_HEX[p.color] + '33' : colors.card,
+              borderWidth: currentPlayer.userId === p.userId ? 2 : 1,
+              borderColor: currentPlayer.userId === p.userId ? COLOR_HEX[p.color] : colors.border,
+            }}
+          >
+            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: COLOR_HEX[p.color] }} />
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>{p.name}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <LudoBoard
+          players={state.players}
+          legalMoveTokens={myTurn && state.turnPhase === 'move' ? state.legalMoves : []}
+          currentPlayerColor={myTurn ? me?.color ?? null : null}
+          onTokenPress={handleTokenPress}
+        />
+      </View>
+
+      <View style={{ alignItems: 'center', paddingBottom: 24, gap: 10 }}>
+        <Text style={{ fontWeight: '700', color: colors.text }}>
+          {myTurn
+            ? state.turnPhase === 'roll'
+              ? 'Your turn — roll the dice'
+              : 'Tap a highlighted token to move it'
+            : `Waiting for ${currentPlayer.name}…`}
+        </Text>
+
+        {myTurn && state.turnPhase === 'roll' && (
+          <Pressable
+            onPress={handleRoll}
+            disabled={acting}
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 12,
+              backgroundColor: colors.card,
+              borderWidth: 2,
+              borderColor: COLOR_HEX[me?.color ?? 'red'],
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 36 }}>{state.diceValue ? DICE_FACES[state.diceValue] : '🎲'}</Text>
+          </Pressable>
+        )}
+        {state.diceValue && state.turnPhase === 'move' && (
+          <Text style={{ fontSize: 40 }}>{DICE_FACES[state.diceValue]}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
