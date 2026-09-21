@@ -5,7 +5,7 @@ import { Public } from './common/decorators/public.decorator';
 // Permanent download URL — update this after each new APK build
 const WEBSITE_URL = 'https://aifdms-hostel-app.netlify.app';
 const PERMANENT_GITHUB_APK_URL =
-  'https://github.com/DhruvHarani1/hms/releases/download/v2.1.0-games-apk/hostel-app-v2.1.0-games.apk';
+  'https://github.com/DhruvHarani1/hms/releases/download/v2.2.0-apk/hostel-app-v2.2.0.apk';
 
 @Public()
 @Controller('download')
@@ -13,9 +13,9 @@ export class DownloadController {
   @Get('version')
   getVersion() {
     return {
-      latestVersion: process.env.APP_LATEST_VERSION || '2.1.0',
-      // Bumped to 2.1.0 — any app below this will see the "Update Required" screen
-      minRequiredVersion: process.env.APP_MIN_REQUIRED_VERSION || '2.0.0',
+      latestVersion: process.env.APP_LATEST_VERSION || '2.2.0',
+      // Bumped to 2.2.0 (games/leaderboard native build) — any app below this is force-gated
+      minRequiredVersion: process.env.APP_MIN_REQUIRED_VERSION || '2.2.0',
       // downloadUrl shown in the "Update Required" screen — points to website/download
       downloadUrl:
         process.env.APP_DOWNLOAD_URL || WEBSITE_URL,
