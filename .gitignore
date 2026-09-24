@@ -30,4 +30,3 @@ backend/prisma/*.db
 # misc junk
 *.docx
 *.zip
-wrangler.toml
