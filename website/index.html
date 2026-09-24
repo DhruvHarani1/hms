@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AIFDMS — The Official Hostel Management App</title>
-  <meta name="description" content="Download AIFDMS v2.1.0 — the all-in-one hostel management app. Gamification, custom meal alerts, attendance streaks, smart meal tracking, bill splitting, complaints, and real-time push alerts.">
+  <meta name="description" content="Download AIFDMS — the all-in-one hostel management app. Gamification, custom meal alerts, attendance streaks, multiplayer UNO & Ludo, hostel leaderboards, smart meal tracking, bill splitting, complaints, and real-time push alerts.">
 
   <!-- Preload critical assets -->
   <link rel="preload" href="/assets/logo.jpg" as="image" type="image/jpeg">
@@ -86,7 +86,13 @@
 
   <!-- ───────────────────── HERO ───────────────────── -->
   <section class="hero" id="hero">
+    <canvas id="hero-canvas" class="hero__canvas"></canvas>
     <div class="container hero__content">
+
+      <div class="hero__badge">
+        <span class="hero__badge-dot"></span>
+        NEW — Multiplayer UNO &amp; Ludo, Leaderboards
+      </div>
 
       <h1 class="hero__title">
         Your Hostel,<br>
@@ -111,7 +117,7 @@
 
       <div class="hero__stats">
         <div class="hero__stat">
-          <div class="hero__stat-val" id="version-badge">v2.0.0</div>
+          <div class="hero__stat-val" id="version-badge">v2.3.0</div>
           <div class="hero__stat-label">Latest Version</div>
         </div>
         <div class="hero__stat">
@@ -191,7 +197,7 @@
   <!-- ───────────────────── STATS ───────────────────── -->
   <section class="container stats">
     <div class="stats__card">
-      <div class="stats__num stats__num--purple" data-count="7">0</div>
+      <div class="stats__num stats__num--purple" data-count="13">0</div>
       <div class="stats__label">Core Modules</div>
     </div>
     <div class="stats__card">
@@ -266,16 +272,34 @@
           <div class="feat__desc">Set a monthly spending limit and track personal and shared expenses with visual progress meters, pie charts, and analytics.</div>
         </div>
 
-        <div class="feat feat--new">
+        <div class="feat">
           <div class="feat__icon">🔒</div>
-          <div class="feat__title">Past-Day Record Lock <span class="feat__badge">New in v2</span></div>
+          <div class="feat__title">Past-Day Record Lock</div>
           <div class="feat__desc">Attendance and meal records are locked after the day ends. Students can request corrections which go to the warden for approval — keeping records accurate and tamper-proof.</div>
         </div>
 
-        <div class="feat feat--new">
+        <div class="feat">
           <div class="feat__icon">🟢</div>
-          <div class="feat__title">Color-Coded Calendar <span class="feat__badge">New in v2</span></div>
+          <div class="feat__title">Color-Coded Calendar</div>
           <div class="feat__desc">At a glance, green days mean present / eating, red means absent / skipping. Know your entire month's record the moment you open the app.</div>
+        </div>
+
+        <div class="feat feat--new">
+          <div class="feat__icon">🃏</div>
+          <div class="feat__title">Multiplayer UNO &amp; Ludo <span class="feat__badge">New in v2.3</span></div>
+          <div class="feat__desc">Real card and board graphics, smooth hop animations, sound effects. Play online with your hostel, or head-to-head against the computer.</div>
+        </div>
+
+        <div class="feat feat--new">
+          <div class="feat__icon">📶</div>
+          <div class="feat__title">Zero-Data Local Play <span class="feat__badge">New in v2.3</span></div>
+          <div class="feat__desc">Host a game over WiFi or hotspot and play with friends nearby — no internet, no data used. Auto-discovery finds nearby games automatically, or scan a QR code to join.</div>
+        </div>
+
+        <div class="feat feat--new">
+          <div class="feat__icon">🏆</div>
+          <div class="feat__title">Hostel Leaderboard <span class="feat__badge">New in v2.3</span></div>
+          <div class="feat__desc">Ranked by weekly attendance and meal activity, streaks, and badges earned. See where you stand against the rest of your hostel.</div>
         </div>
       </div>
     </div>
